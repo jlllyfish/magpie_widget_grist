@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr" data-fr-theme>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Magpie · Gestionnaire de comptes de service Grist</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/magpie.svg') }}" />
+
+  <!-- DSFR (fichiers locaux — voir install_dsfr.sh) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/dsfr.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/utility/utility.min.css') }}" />
+
+  <!-- App -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+</head>
+<body data-has-config="{{ 'true' if has_config else 'false' }}">
+
+  <!-- ── En-tête ───────────────────────────────────────────────────────── -->
+  <header class="grist-header">
+    <div class="grist-header__inner">
+      <div class="grist-header__brand">
+        <img src="{{ url_for('static', filename='img/logo-ministere.png') }}"
+             alt="Ministère de l'agriculture, de l'agro-alimentaire et de la souveraineté alimentaire"
+             class="grist-header__ministry-logo" />
+
+        <span class="grist-header__separator" aria-hidden="true"></span>
+
+        <img src="{{ url_for('static', filename='img/magpie.svg') }}"
+             alt="" aria-hidden="true"
+             class="grist-header__logo" />
+        <div>
+          <p class="grist-header__title">Magpie</p>
+          <p class="grist-header__subtitle">Gestionnaire de comptes de service Grist</p>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('logout') }}" style="margin-left:auto;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="fr-btn fr-btn--secondary fr-btn--sm">Se déconnecter</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="grist-main">
+
+    <!-- ── Connexion ─────────────────────────────────────────────────── -->
+    <section class="fr-accordion" id="config-accordion">
+      <h2 class="fr-accordion__title">
+        <button class="fr-accordion__btn" aria-expanded="false" aria-controls="config-accordion-content">
+          Connexion à l'instance Grist
+        </button>
+      </h2>
+      <div class="fr-collapse" id="config-accordion-content">
+        <div class="grist-accordion-body">
+          <div class="grist-grid-2">
+            <div class="fr-input-group" id="group-cfg-url">
+              <label class="fr-label" for="cfg-url">URL de l'instance</label>
+              <input class="fr-input" type="text" id="cfg-url"
+                     value="{{ grist_url }}" placeholder="https://grist.example.com"
+                     aria-describedby="cfg-url-messages" />
+              <div class="fr-messages-group" id="cfg-url-messages" aria-live="polite"></div>
+            </div>
+            <div class="fr-input-group" id="group-cfg-key">
+              <label class="fr-label" for="cfg-key">
+                Clé API maître *
+              </label>
+              <input class="fr-input" type="password" id="cfg-key"
+                     placeholder="Clé API Grist"
+                     aria-describedby="cfg-key-messages" />
+              <div class="fr-messages-group" id="cfg-key-messages" aria-live="polite"></div>
+            </div>
+          </div>
+          <div class="fr-btns-group fr-btns-group--inline fr-mt-2w">
+            <button id="btn-save-config" class="fr-btn">
+              Sauvegarder
+            </button>
+          </div>
+
+          <div id="config-success" class="fr-alert fr-alert--success fr-alert--sm fr-mt-2w" style="display:none;">
+            <p>Connexion vérifiée et enregistrée avec succès.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Création d'un compte ──────────────────────────────────────── -->
+    <section class="grist-section">
+      <h2 class="grist-section__title">Nouveau compte de service</h2>
+      <div class="grist-grid-3">
+        <div class="fr-input-group" id="group-label">
+          <label class="fr-label" for="new-label">Nom *</label>
+          <input class="fr-input" type="text" id="new-label"
+                 aria-describedby="new-label-messages" placeholder="n8n-automation" />
+          <div class="fr-messages-group" id="new-label-messages" aria-live="polite"></div>
+        </div>
+        <div class="fr-input-group" id="group-desc">
+          <label class="fr-label" for="new-desc">Description</label>
+          <input class="fr-input" type="text" id="new-desc" placeholder="Synchronisation hebdomadaire" />
+        </div>
+        <div class="fr-input-group" id="group-expires">
+          <label class="fr-label" for="new-expires">Date d'expiration *</label>
+          <input class="fr-input" type="date" id="new-expires"
+                 aria-describedby="new-expires-messages" />
+          <div class="fr-messages-group" id="new-expires-messages" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="fr-mt-2w">
+        <button id="btn-create" class="fr-btn fr-btn--icon-left fr-icon-add-line">
+          Créer le compte
+        </button>
+      </div>
+
+      <!-- Révélation de la clé -->
+      <div id="key-reveal" class="key-reveal" role="alert">
+        <h3 class="key-reveal__title">Clé générée</h3>
+
+        <div class="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
+          <p>Copiez votre clé API maintenant, elle ne sera plus affichée.</p>
+        </div>
+
+        <p class="key-reveal__meta">Clé API</p>
+        <div class="key-reveal__row">
+          <code id="key-value" class="key-reveal__value"></code>
+          <button id="btn-copy-key" class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line">
+            Copier
+          </button>
+        </div>
+
+        <p class="key-reveal__meta fr-mt-2w">Login <span style="font-weight:400;color:var(--text-mention-grey);">(à utiliser pour partager un document)</span></p>
+        <div class="key-reveal__row">
+          <code id="key-login" class="key-reveal__value"></code>
+          <button id="btn-copy-login" class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line">
+            Copier
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Liste des comptes ──────────────────────────────────────────── -->
+    <section class="grist-section">
+      <div class="grist-section__header">
+        <h2 class="grist-section__title" style="margin-bottom:0;">Comptes existants</h2>
+        <button id="btn-refresh" class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-refresh-line">
+          Rafraîchir
+        </button>
+      </div>
+
+      <div id="accounts-empty" class="empty-state" style="display:none;">
+        <svg class="empty-state__icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p>Aucun compte de service trouvé.</p>
+      </div>
+
+      <div id="accounts-error" class="fr-alert fr-alert--error" style="display:none;" role="alert">
+        <p></p>
+      </div>
+
+      <div id="accounts-list" class="account-list"></div>
+    </section>
+
+  </main>
+
+  <!-- ── Modale de confirmation ────────────────────────────────────────── -->
+  <dialog id="confirm-modal" class="fr-modal" aria-labelledby="modal-title" role="dialog">
+    <div class="fr-container fr-container--fluid fr-container-md">
+      <div class="fr-grid-row fr-grid-row--center">
+        <div class="fr-col-12 fr-col-md-8 fr-col-lg-6">
+          <div class="fr-modal__body">
+            <div class="fr-modal__header">
+              <button class="fr-btn--close fr-btn" aria-controls="confirm-modal">Fermer</button>
+            </div>
+            <div class="fr-modal__content">
+              <h1 id="modal-title" class="fr-modal__title">Confirmation</h1>
+              <p id="modal-text"></p>
+            </div>
+            <div class="fr-modal__footer">
+              <div class="fr-btns-group fr-btns-group--right fr-btns-group--inline">
+                <button class="fr-btn fr-btn--secondary" aria-controls="confirm-modal">Annuler</button>
+                <button id="modal-confirm-btn" class="fr-btn fr-btn--icon-left fr-icon-check-line">Confirmer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ── Toast container ───────────────────────────────────────────────── -->
+  <div id="toast-container" class="fr-toast-container" aria-live="polite"></div>
+
+  <!-- DSFR JS -->
+  <script type="module" src="{{ url_for('static', filename='dsfr/dsfr.module.min.js') }}"></script>
+  <script type="text/javascript" nomodule src="{{ url_for('static', filename='dsfr/dsfr.nomodule.min.js') }}"></script>
+
+  <!-- App JS -->
+  <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+</body>
+</html>

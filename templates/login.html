@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr" data-fr-theme>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion · Magpie</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/magpie.svg') }}" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/dsfr.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/utility/utility.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--background-alt-grey);
+    }
+    .login-card {
+      background: var(--background-default-grey);
+      border: 1px solid var(--border-default-grey);
+      border-radius: 8px;
+      padding: 2.5rem;
+      max-width: 26rem;
+      width: 100%;
+    }
+    .login-card__brand {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      margin-bottom: 1.75rem;
+    }
+    .login-card__logo {
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+    }
+    .login-card__title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-title-grey);
+      margin: 0;
+    }
+    .login-card__subtitle {
+      font-size: 0.8125rem;
+      color: var(--text-mention-grey);
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-card__brand">
+        <img src="{{ url_for('static', filename='img/magpie.svg') }}" alt="" aria-hidden="true" class="login-card__logo" />
+        <div>
+          <p class="login-card__title">Magpie</p>
+          <p class="login-card__subtitle">Gestionnaire de comptes de service Grist</p>
+        </div>
+      </div>
+
+      {% if error %}
+      <div class="fr-alert fr-alert--error fr-alert--sm fr-mb-3w">
+        <p>{{ error }}</p>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="fr-input-group">
+          <label class="fr-label" for="email">Email</label>
+          <input class="fr-input" type="email" id="email" name="email"
+                 autofocus required autocomplete="username" />
+        </div>
+        <div class="fr-input-group">
+          <label class="fr-label" for="password">Mot de passe</label>
+          <input class="fr-input" type="password" id="password" name="password"
+                 required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="fr-btn fr-mt-3w" style="width:100%;justify-content:center;">
+          Se connecter
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

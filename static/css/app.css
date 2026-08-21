@@ -1,0 +1,312 @@
+/* Grist Service Accounts — surcharges DSFR */
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.grist-header {
+  background: var(--background-default-grey);
+  border-bottom: 1px solid var(--border-default-grey);
+  padding: 1.5rem 0;
+  margin-bottom: 2rem;
+}
+
+.grist-header__inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.grist-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.grist-header__ministry-logo {
+  height: 100px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.grist-header__separator {
+  width: 1px;
+  height: 52px;
+  background: var(--border-default-grey);
+  flex-shrink: 0;
+}
+
+.grist-header__logo {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+
+.grist-header__title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-title-grey);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.grist-header__subtitle {
+  font-size: 0.875rem;
+  color: var(--text-mention-grey);
+  margin: 0;
+}
+
+/* ── Accordion de configuration ──────────────────────────────────────── */
+
+.grist-accordion-body {
+  padding: 1.25rem 0 0.5rem;
+}
+
+/* ── Main layout ─────────────────────────────────────────────────────── */
+
+.grist-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ── Section (remplace fr-card pour éviter le padding asymétrique) ──── */
+
+.grist-section {
+  background: var(--background-default-grey);
+  border: 1px solid var(--border-default-grey);
+  border-radius: 4px;
+  padding: 1.5rem;
+}
+
+.grist-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.grist-section__title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-title-grey);
+  margin: 0 0 1.25rem 0;
+}
+
+/* ── Grilles simples (évite fr-grid-row qui nécessite fr-container) ─── */
+
+.grist-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.grist-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .grist-grid-2,
+  .grist-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Config panel ────────────────────────────────────────────────────── */
+
+#config-panel {
+  display: none;
+}
+#config-panel.is-open {
+  display: block;
+}
+
+/* ── Révélation de clé ───────────────────────────────────────────────── */
+
+.key-reveal {
+  border: 1px solid var(--border-default-grey);
+  border-radius: 4px;
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+  display: none;
+  background: var(--background-default-grey);
+}
+.key-reveal.is-visible {
+  display: block;
+}
+
+.key-reveal__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-title-grey);
+  margin: 0 0 1rem 0;
+}
+
+.key-reveal__value {
+  background: var(--background-alt-grey);
+  border: 1px solid var(--border-default-grey);
+  border-radius: 4px;
+  padding: 0.625rem 0.875rem;
+  font-family: "Courier New", monospace;
+  font-size: 0.8125rem;
+  color: var(--text-label-grey);
+  word-break: break-all;
+  flex: 1;
+}
+
+.key-reveal__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.key-reveal__meta {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-label-grey);
+  margin: 0 0 0.375rem 0;
+}
+
+/* ── Liste des comptes ───────────────────────────────────────────────── */
+
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.account-card {
+  border: 1px solid var(--border-default-grey);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  background: var(--background-alt-grey);
+  transition: border-color 0.15s;
+}
+
+.account-card:hover {
+  border-color: var(--border-action-high-blue-france);
+}
+
+.account-card.is-expired {
+  opacity: 0.6;
+}
+
+.account-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.account-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-card__name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.account-card__name {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--text-title-grey);
+}
+
+.account-card__id {
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+  color: var(--text-mention-grey);
+  background: var(--background-default-grey);
+  border: 1px solid var(--border-default-grey);
+  border-radius: 3px;
+  padding: 0 5px;
+}
+
+.account-card__desc {
+  font-size: 0.8125rem;
+  color: var(--text-mention-grey);
+  margin: 0 0 4px 0;
+}
+
+.account-card__login,
+.account-card__expires {
+  font-family: "Courier New", monospace;
+  font-size: 0.75rem;
+  color: var(--text-mention-grey);
+  margin: 2px 0 0 0;
+}
+
+.account-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── État vide ───────────────────────────────────────────────────────── */
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-mention-grey);
+}
+
+.empty-state__icon {
+  margin: 0 auto 0.75rem;
+  opacity: 0.35;
+  display: block;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+
+.fr-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.fr-toast {
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: all 0.2s;
+  max-width: 320px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.fr-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fr-toast--success {
+  background: var(--background-contrast-success);
+  color: var(--text-default-success);
+  border: 1px solid var(--border-plain-success);
+}
+
+.fr-toast--error {
+  background: var(--background-contrast-error);
+  color: var(--text-default-error);
+  border: 1px solid var(--border-plain-error);
+}

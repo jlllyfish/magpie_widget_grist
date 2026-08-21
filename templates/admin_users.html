@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr" data-fr-theme>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration · Magpie</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/magpie.svg') }}" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/dsfr.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/utility/utility.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+</head>
+<body>
+
+  <header class="grist-header">
+    <div class="grist-header__inner">
+      <div class="grist-header__brand">
+        <img src="{{ url_for('static', filename='img/logo-ministere.png') }}"
+             alt="Ministère de l'agriculture" class="grist-header__ministry-logo" />
+        <span class="grist-header__separator" aria-hidden="true"></span>
+        <img src="{{ url_for('static', filename='img/magpie.svg') }}" alt="" aria-hidden="true" class="grist-header__logo" />
+        <div>
+          <p class="grist-header__title">Magpie — Administration</p>
+          <p class="grist-header__subtitle">Gestion des comptes utilisateurs</p>
+        </div>
+      </div>
+
+      <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center;">
+        <a href="{{ url_for('index') }}" class="fr-btn fr-btn--secondary fr-btn--sm">Retour à l'application</a>
+        <form method="POST" action="{{ url_for('logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="fr-btn fr-btn--secondary fr-btn--sm">Se déconnecter</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <main class="grist-main">
+
+    <!-- ── Création d'utilisateur ────────────────────────────────────── -->
+    <section class="grist-section">
+      <h2 class="grist-section__title">Ajouter un utilisateur</h2>
+
+      <div class="grist-grid-3">
+        <div class="fr-input-group" id="group-new-email">
+          <label class="fr-label" for="new-email">Email *</label>
+          <input class="fr-input" type="email" id="new-email" placeholder="prenom.nom@agriculture.gouv.fr"
+                 aria-describedby="new-email-messages" />
+          <div class="fr-messages-group" id="new-email-messages" aria-live="polite"></div>
+        </div>
+        <div class="fr-input-group" id="group-new-password">
+          <label class="fr-label" for="new-password">Mot de passe temporaire *</label>
+          <input class="fr-input" type="text" id="new-password" placeholder="12 caractères minimum"
+                 aria-describedby="new-password-messages" />
+          <div class="fr-messages-group" id="new-password-messages" aria-live="polite"></div>
+        </div>
+        <div class="fr-input-group">
+          <label class="fr-label" for="new-is-admin">Rôle</label>
+          <select class="fr-select" id="new-is-admin">
+            <option value="false" selected>Utilisateur standard</option>
+            <option value="true">Administrateur</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fr-mt-2w">
+        <button id="btn-create-user" class="fr-btn">Créer le compte</button>
+      </div>
+
+      <div id="user-success" class="fr-alert fr-alert--success fr-alert--sm fr-mt-2w" style="display:none;">
+        <p>Compte créé avec succès.</p>
+      </div>
+    </section>
+
+    <!-- ── Liste des utilisateurs ────────────────────────────────────── -->
+    <section class="grist-section">
+      <h2 class="grist-section__title">Utilisateurs existants</h2>
+
+      <div class="account-list">
+        {% for user in users %}
+        <div class="account-card">
+          <div class="account-card__header">
+            <div class="account-card__info">
+              <div class="account-card__name-row">
+                <span class="account-card__name">{{ user.email }}</span>
+                {% if user.is_admin %}
+                <span class="fr-badge fr-badge--sm fr-badge--info">administrateur</span>
+                {% endif %}
+              </div>
+              <div class="account-card__login">
+                Créé le {{ user.created_at.strftime('%d/%m/%Y') }}
+                {% if user.last_login_at %}
+                  · Dernière connexion le {{ user.last_login_at.strftime('%d/%m/%Y à %H:%M') }}
+                {% else %}
+                  · Jamais connecté
+                {% endif %}
+              </div>
+            </div>
+            <div class="account-card__actions">
+              {% if user.id != current_user.id %}
+              <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-delete-line"
+                      style="color: var(--text-default-error);"
+                      onclick="confirmDeleteUser({{ user.id }}, '{{ user.email }}')">Supprimer</button>
+              {% else %}
+              <span class="fr-badge fr-badge--sm">vous</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modale de confirmation -->
+  <dialog id="confirm-modal" class="fr-modal" aria-labelledby="modal-title" role="dialog">
+    <div class="fr-container fr-container--fluid fr-container-md">
+      <div class="fr-grid-row fr-grid-row--center">
+        <div class="fr-col-12 fr-col-md-8 fr-col-lg-6">
+          <div class="fr-modal__body">
+            <div class="fr-modal__header">
+              <button class="fr-btn--close fr-btn" aria-controls="confirm-modal">Fermer</button>
+            </div>
+            <div class="fr-modal__content">
+              <h1 id="modal-title" class="fr-modal__title">Confirmation</h1>
+              <p id="modal-text"></p>
+            </div>
+            <div class="fr-modal__footer">
+              <div class="fr-btns-group fr-btns-group--right fr-btns-group--inline">
+                <button class="fr-btn fr-btn--secondary" aria-controls="confirm-modal">Annuler</button>
+                <button id="modal-confirm-btn" class="fr-btn fr-btn--icon-left fr-icon-check-line">Confirmer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast-container" class="fr-toast-container" aria-live="polite"></div>
+
+  <script type="module" src="{{ url_for('static', filename='dsfr/dsfr.module.min.js') }}"></script>
+  <script type="text/javascript" nomodule src="{{ url_for('static', filename='dsfr/dsfr.nomodule.min.js') }}"></script>
+
+  <script defer src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+</body>
+</html>
