@@ -11,7 +11,7 @@ venv/
 env/
 
 # DSFR (assets locaux, à régénérer via install_dsfr.sh)
-static/dsfr/
+# static/dsfr/
 
 # Flask
 instance/
