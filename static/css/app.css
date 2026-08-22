@@ -227,8 +227,6 @@
   padding: 1.25rem 0 0.5rem;
 }
 
-
-
 /* ── Main layout ─────────────────────────────────────────────────────── */
 
 .grist-main {
@@ -473,7 +471,7 @@
   transform: translateY(6px);
   transition: all 0.2s;
   max-width: 320px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .fr-toast.is-visible {
@@ -491,4 +489,15 @@
   background: var(--background-contrast-error);
   color: var(--text-default-error);
   border: 1px solid var(--border-plain-error);
+}
+
+/* ── Correctif modale DSFR ────────────────────────────────────────────── */
+/* La balise <dialog> doit etre invisible tant qu'elle n'a pas l'attribut
+  "open" (comportement natif du navigateur). Si le CSS DSFR charge par
+  install_dsfr.sh ne force pas ce masquage correctement selon la version,
+  la modale reste dans le flux normal et provoque un debordement horizontal
+  qui casse toute la mise en page (header compris). On le force nous-memes,
+   independamment du DSFR, pour ne jamais en dependre sur ce point precis. */
+dialog.fr-modal:not([open]) {
+  display: none !important;
 }
