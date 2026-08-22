@@ -164,7 +164,7 @@ def create_user():
     db.session.commit()
 
     app.logger.info("Utilisateur cree par %s : %s", current_user.email, email)
-    return jsonify({"ok": True, "id": user.id, "email": user.email})
+    return jsonify({"ok": True, "id": user.id, "email": user.email, "is_admin": user.is_admin})
 
 
 @app.route("/api/admin/users/<int:user_id>/reset-password", methods=["POST"])
