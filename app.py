@@ -1,24 +1,23 @@
-import logging
 import os
 import re
-from datetime import datetime, timezone
+import logging
+import secrets
 from functools import wraps
 
 import requests
-from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import (
-    LoginManager,
-    current_user,
-    login_required,
-    login_user,
-    logout_user,
+    LoginManager, login_user, logout_user, login_required,
+    current_user, UserMixin,
 )
-from flask_wtf import CSRFProtect
-from models import User, db
 from werkzeug.middleware.proxy_fix import ProxyFix
+from dotenv import load_dotenv
+from datetime import datetime, timezone
+
+from models import db, User
 
 load_dotenv()
 
@@ -32,7 +31,7 @@ FLASK_SECRET = os.environ.get("FLASK_SECRET")
 if not FLASK_SECRET:
     raise RuntimeError(
         "FLASK_SECRET manquant. Generez-en un avec : "
-        'python -c "import secrets; print(secrets.token_hex(32))"'
+        "python -c \"import secrets; print(secrets.token_hex(32))\""
     )
 app.secret_key = FLASK_SECRET
 
@@ -81,24 +80,20 @@ def admin_required(f):
         if not current_user.is_authenticated or not current_user.is_admin:
             return jsonify({"error": "Acces reserve aux administrateurs"}), 403
         return f(*args, **kwargs)
-
     return wrapper
 
 
 def api_login_required(f):
     """Variante API : renvoie 401 JSON plutot qu'une redirection HTML."""
-
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return jsonify({"error": "Authentification requise"}), 401
         return f(*args, **kwargs)
-
     return wrapper
 
 
 # ─── Authentification ────────────────────────────────────────────────────────
-
 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
@@ -129,7 +124,6 @@ def logout():
 
 # ─── Administration des comptes (reservee aux admins) ─────────────────────────
 
-
 @app.route("/admin/users", methods=["GET"])
 @login_required
 def admin_users():
@@ -137,6 +131,15 @@ def admin_users():
         return redirect(url_for("index"))
     users = User.query.order_by(User.created_at.desc()).all()
     return render_template("admin_users.html", users=users)
+
+
+@app.route("/api/admin/generate-password", methods=["GET"])
+@admin_required
+def generate_password():
+    """Genere un mot de passe fort aleatoire, jamais stocke tel quel."""
+    alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    password = "".join(secrets.choice(alphabet) for _ in range(16))
+    return jsonify({"password": password})
 
 
 @app.route("/api/admin/users", methods=["POST"])
@@ -151,9 +154,7 @@ def create_user():
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
         return jsonify({"error": "Adresse email invalide"}), 400
     if len(password) < 12:
-        return jsonify(
-            {"error": "Le mot de passe doit faire au moins 12 caracteres"}
-        ), 400
+        return jsonify({"error": "Le mot de passe doit faire au moins 12 caracteres"}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Un compte existe deja avec cet email"}), 409
 
@@ -166,13 +167,28 @@ def create_user():
     return jsonify({"ok": True, "id": user.id, "email": user.email})
 
 
+@app.route("/api/admin/users/<int:user_id>/reset-password", methods=["POST"])
+@admin_required
+@limiter.limit("20 per hour")
+def reset_user_password(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({"error": "Utilisateur introuvable"}), 404
+
+    alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    new_password = "".join(secrets.choice(alphabet) for _ in range(16))
+    user.set_password(new_password)
+    db.session.commit()
+
+    app.logger.info("Mot de passe reinitialise par %s pour : %s", current_user.email, user.email)
+    return jsonify({"ok": True, "password": new_password})
+
+
 @app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
 @admin_required
 def delete_user(user_id):
     if user_id == current_user.id:
-        return jsonify(
-            {"error": "Vous ne pouvez pas supprimer votre propre compte"}
-        ), 400
+        return jsonify({"error": "Vous ne pouvez pas supprimer votre propre compte"}), 400
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "Utilisateur introuvable"}), 404
@@ -191,15 +207,7 @@ def is_valid_grist_url(url):
     if not url or not URL_PATTERN.match(url):
         return False
     lowered = url.lower()
-    forbidden = [
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
-        "169.254.",
-        "10.",
-        "192.168.",
-        "172.16.",
-    ]
+    forbidden = ["localhost", "127.0.0.1", "0.0.0.0", "169.254.", "10.", "192.168.", "172.16."]
     return not any(f in lowered for f in forbidden)
 
 
@@ -224,7 +232,6 @@ def redact(key):
 
 
 # ─── Routes applicatives ────────────────────────────────────────────────────────
-
 
 @app.route("/")
 @login_required
@@ -252,11 +259,7 @@ def set_config():
 
     if key:
         session["api_key"] = key
-        app.logger.info(
-            "Cle API mise a jour en session par %s : %s",
-            current_user.email,
-            redact(key),
-        )
+        app.logger.info("Cle API mise a jour en session par %s : %s", current_user.email, redact(key))
 
     return jsonify({"ok": True})
 
@@ -305,9 +308,7 @@ def create_account():
     except (ValueError, TypeError):
         return jsonify({"error": "Format de date invalide"}), 400
     if expires_date < datetime.now(timezone.utc).date():
-        return jsonify(
-            {"error": "La date d'expiration ne peut pas être antérieure à aujourd'hui"}
-        ), 400
+        return jsonify({"error": "La date d'expiration ne peut pas être antérieure à aujourd'hui"}), 400
     payload["expiresAt"] = expires_at
 
     try:
@@ -319,9 +320,7 @@ def create_account():
         )
         r.raise_for_status()
         data = r.json()
-        app.logger.info(
-            "Compte cree par %s : login=%s", current_user.email, data.get("login", "?")
-        )
+        app.logger.info("Compte cree par %s : login=%s", current_user.email, data.get("login", "?"))
         return jsonify(data)
     except requests.exceptions.RequestException as e:
         app.logger.error("Erreur creation compte : %s", e)
@@ -350,7 +349,6 @@ def delete_account(account_id):
 
 
 # ─── Headers de securite ─────────────────────────────────────────────────────
-
 
 @app.after_request
 def set_security_headers(response):

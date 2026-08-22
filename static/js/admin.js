@@ -28,6 +28,25 @@ document.getElementById('new-password').addEventListener('input', () => {
   setFieldError('group-new-password', 'new-password-messages', 'new-password', null);
 });
 
+// ─── Generation de mot de passe ────────────────────────────────────────────────
+
+document.getElementById('btn-generate-password').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-generate-password');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/admin/generate-password');
+    const data = await r.json();
+    document.getElementById('new-password').value = data.password;
+    setFieldError('group-new-password', 'new-password-messages', 'new-password', null);
+  } catch (e) {
+    setFieldError('group-new-password', 'new-password-messages', 'new-password', 'Erreur lors de la génération');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ─── Creation d'utilisateur ─────────────────────────────────────────────────────
+
 document.getElementById('btn-create-user').addEventListener('click', async () => {
   const email = document.getElementById('new-email').value.trim();
   const password = document.getElementById('new-password').value;
@@ -60,8 +79,13 @@ document.getElementById('btn-create-user').addEventListener('click', async () =>
       return;
     }
 
+    document.getElementById('user-password-value').textContent = password;
     document.getElementById('user-success').style.display = 'block';
-    setTimeout(() => window.location.reload(), 1000);
+
+    document.getElementById('new-email').value = '';
+    document.getElementById('new-password').value = '';
+    document.getElementById('new-is-admin').value = 'false';
+
   } catch (e) {
     setFieldError('group-new-email', 'new-email-messages', 'new-email', 'Erreur réseau');
   } finally {
@@ -69,7 +93,44 @@ document.getElementById('btn-create-user').addEventListener('click', async () =>
   }
 });
 
+document.getElementById('btn-copy-user-password').addEventListener('click', () => {
+  const val = document.getElementById('user-password-value').textContent;
+  navigator.clipboard.writeText(val);
+});
+
+// ─── Reinitialisation de mot de passe ──────────────────────────────────────────
+
 let _modalCallback = null;
+
+function confirmResetPassword(id, email) {
+  document.getElementById('modal-title').textContent = 'Réinitialiser le mot de passe';
+  document.getElementById('modal-text').textContent =
+    `Générer un nouveau mot de passe pour « ${email} » ? L'ancien mot de passe ne fonctionnera plus.`;
+  _modalCallback = async () => {
+    try {
+      const r = await fetch(`/api/admin/users/${id}/reset-password`, {
+        method: 'POST',
+        headers: csrfHeaders(),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+
+      document.getElementById(`reset-value-${id}`).textContent = d.password;
+      document.getElementById(`reset-reveal-${id}`).style.display = 'block';
+    } catch (e) {
+      alert('Erreur : ' + e.message);
+    }
+  };
+  const modal = document.getElementById('confirm-modal');
+  dsfr(modal).modal.disclose();
+}
+
+function copyResetPassword(id) {
+  const val = document.getElementById(`reset-value-${id}`).textContent;
+  navigator.clipboard.writeText(val);
+}
+
+// ─── Suppression d'utilisateur ─────────────────────────────────────────────────
 
 function confirmDeleteUser(id, email) {
   document.getElementById('modal-title').textContent = 'Supprimer l\'utilisateur';
