@@ -79,12 +79,15 @@
   align-items: center;
   gap: 0.5rem;
   max-width: 260px;
+  min-width: 0;
 }
 
-.grist-user-menu__btn > *:not(.grist-user-menu__chevron) {
+.grist-user-menu__btn-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .grist-user-menu__chevron {
@@ -223,6 +226,8 @@
 .grist-accordion-body {
   padding: 1.25rem 0 0.5rem;
 }
+
+
 
 /* ── Main layout ─────────────────────────────────────────────────────── */
 
@@ -468,7 +473,7 @@
   transform: translateY(6px);
   transition: all 0.2s;
   max-width: 320px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
 
 .fr-toast.is-visible {
