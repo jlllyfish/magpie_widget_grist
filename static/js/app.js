@@ -140,6 +140,12 @@ function clearFieldErrors() {
   setFieldError("group-expires", "new-expires-messages", "new-expires", null);
 }
 
+// Empeche de choisir une date passee dans le selecteur natif du navigateur
+(function setMinExpiryDate() {
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("new-expires").setAttribute("min", today);
+})();
+
 document.getElementById("new-label").addEventListener("input", () => {
   setFieldError("group-label", "new-label-messages", "new-label", null);
 });
@@ -172,6 +178,17 @@ async function createAccount() {
       "La date d'expiration est obligatoire",
     );
     hasError = true;
+  } else {
+    const today = new Date().toISOString().split("T")[0];
+    if (exp < today) {
+      setFieldError(
+        "group-expires",
+        "new-expires-messages",
+        "new-expires",
+        "La date d'expiration ne peut pas être antérieure à aujourd'hui",
+      );
+      hasError = true;
+    }
   }
   if (hasError) return;
 
