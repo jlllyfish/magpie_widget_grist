@@ -1,348 +1,201 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr" data-fr-theme>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Administration · Magpie</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="{{ url_for('static', filename='img/magpie.svg') }}"
-    />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration · Magpie</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/magpie.svg') }}" />
 
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='dsfr/dsfr.min.css') }}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='dsfr/utility/utility.min.css') }}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/app.css') }}"
-    />
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/dsfr.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='dsfr/utility/utility.min.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
 
-    <meta name="csrf-token" content="{{ csrf_token() }}" />
-  </head>
-  <body>
-    <header class="grist-header">
-      <div class="grist-header__inner">
-        <div class="grist-header__brand">
-          <img
-            src="{{ url_for('static', filename='img/logo-ministere.png') }}"
-            alt="Ministère de l'agriculture"
-            class="grist-header__ministry-logo"
-          />
-          <span class="grist-header__separator" aria-hidden="true"></span>
-          <img
-            src="{{ url_for('static', filename='img/magpie.svg') }}"
-            alt=""
-            aria-hidden="true"
-            class="grist-header__logo"
-          />
-          <div>
-            <p class="grist-header__title">Magpie — Administration</p>
-            <p class="grist-header__subtitle">
-              Gestion des comptes utilisateurs
-            </p>
-          </div>
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+</head>
+<body>
+
+  <header class="grist-header">
+    <div class="grist-header__inner">
+      <div class="grist-header__brand">
+        <img src="{{ url_for('static', filename='img/logo-ministere.png') }}"
+             alt="Ministère de l'agriculture" class="grist-header__ministry-logo" />
+        <span class="grist-header__separator" aria-hidden="true"></span>
+        <img src="{{ url_for('static', filename='img/magpie.svg') }}" alt="" aria-hidden="true" class="grist-header__logo" />
+        <div>
+          <p class="grist-header__title">Magpie — Administration</p>
+          <p class="grist-header__subtitle">Gestion des comptes utilisateurs</p>
         </div>
+      </div>
 
-        <div class="grist-header__actions">
-          <div class="grist-user-menu">
-            <button
-              class="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-left fr-icon-account-circle-line grist-user-menu__btn"
-              id="user-menu-btn"
-              aria-expanded="false"
-              aria-controls="user-menu-panel"
-            >
-              <span class="grist-user-menu__btn-label"
-                >{{ current_user.email }}</span
-              >
-              <span
-                class="grist-user-menu__chevron fr-icon-arrow-down-s-line"
-                aria-hidden="true"
-              ></span>
-            </button>
+      <div class="grist-header__actions">
+        <div class="gm-usermenu">
+          <button class="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-left fr-icon-account-circle-line gm-usermenu__btn"
+                  id="user-menu-btn" aria-expanded="false" aria-controls="user-menu-panel">
+            <span class="gm-usermenu__btn-label">{{ current_user.email }}</span>
+            <span class="gm-usermenu__chevron fr-icon-arrow-down-s-line" aria-hidden="true"></span>
+          </button>
 
-            <div
-              class="grist-user-menu__panel"
-              id="user-menu-panel"
-              role="menu"
-              hidden
-            >
-              <div class="grist-user-menu__identity">
-                <p class="grist-user-menu__label">Connecté en tant que</p>
-                <p class="grist-user-menu__email">{{ current_user.email }}</p>
-                <span class="fr-badge fr-badge--sm fr-badge--info fr-mt-1v"
-                  >administrateur</span
-                >
-              </div>
-
-              <ul class="grist-user-menu__links" role="none">
-                <li role="none">
-                  <a
-                    href="{{ url_for('index') }}"
-                    role="menuitem"
-                    class="grist-user-menu__link"
-                  >
-                    <span
-                      class="fr-icon-arrow-left-line"
-                      aria-hidden="true"
-                    ></span>
-                    Retour à l'application
-                  </a>
-                </li>
-              </ul>
-
-              <form
-                method="POST"
-                action="{{ url_for('logout') }}"
-                class="grist-user-menu__logout"
-              >
-                <input
-                  type="hidden"
-                  name="csrf_token"
-                  value="{{ csrf_token() }}"
-                />
-                <button
-                  type="submit"
-                  class="fr-btn fr-btn--secondary fr-btn--sm"
-                  style="width: 100%; justify-content: center"
-                >
-                  Se déconnecter
-                </button>
-              </form>
+          <div class="gm-usermenu__panel" id="user-menu-panel" role="menu" hidden>
+            <div class="gm-usermenu__identity">
+              <p class="gm-usermenu__label">Connecté en tant que</p>
+              <p class="gm-usermenu__email">{{ current_user.email }}</p>
+              <span class="fr-badge fr-badge--sm fr-badge--info fr-mt-1v">administrateur</span>
             </div>
+
+            <ul class="gm-usermenu__links" role="none">
+              <li role="none">
+                <a href="{{ url_for('index') }}" role="menuitem" class="gm-usermenu__link">
+                  <span class="fr-icon-arrow-left-line" aria-hidden="true"></span>
+                  Retour à l'application
+                </a>
+              </li>
+            </ul>
+
+            <form method="POST" action="{{ url_for('logout') }}" class="gm-usermenu__logout">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="fr-btn fr-btn--secondary fr-btn--sm" style="width:100%;justify-content:center;">
+                Se déconnecter
+              </button>
+            </form>
           </div>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="grist-main">
-      <!-- ── Création d'utilisateur ────────────────────────────────────── -->
-      <section class="grist-section">
-        <h2 class="grist-section__title">Ajouter un utilisateur</h2>
+  <main class="grist-main">
 
-        <div class="grist-grid-3">
-          <div class="fr-input-group" id="group-new-email">
-            <label class="fr-label" for="new-email">Email *</label>
-            <input
-              class="fr-input"
-              type="email"
-              id="new-email"
-              placeholder="prenom.nom@agriculture.gouv.fr"
-              aria-describedby="new-email-messages"
-            />
-            <div
-              class="fr-messages-group"
-              id="new-email-messages"
-              aria-live="polite"
-            ></div>
-          </div>
-          <div class="fr-input-group" id="group-new-password">
-            <label class="fr-label" for="new-password">Mot de passe *</label>
-            <div style="display: flex; gap: 0.5rem; align-items: flex-start">
-              <input
-                class="fr-input"
-                type="text"
-                id="new-password"
-                placeholder="12 caractères minimum"
-                aria-describedby="new-password-messages"
-                style="flex: 1"
-              />
-              <button
-                type="button"
-                id="btn-generate-password"
-                class="fr-btn fr-btn--secondary fr-btn--sm fr-icon-refresh-line"
-                title="Générer un mot de passe"
-              ></button>
-            </div>
-            <div
-              class="fr-messages-group"
-              id="new-password-messages"
-              aria-live="polite"
-            ></div>
-          </div>
-          <div class="fr-input-group">
-            <label class="fr-label" for="new-is-admin">Rôle</label>
-            <select class="fr-select" id="new-is-admin">
-              <option value="false" selected>Utilisateur standard</option>
-              <option value="true">Administrateur</option>
-            </select>
-          </div>
+    <!-- ── Création d'utilisateur ────────────────────────────────────── -->
+    <section class="grist-section">
+      <h2 class="grist-section__title">Ajouter un utilisateur</h2>
+
+      <div class="grist-grid-3">
+        <div class="fr-input-group" id="group-new-email">
+          <label class="fr-label" for="new-email">Email *</label>
+          <input class="fr-input" type="email" id="new-email" placeholder="prenom.nom@agriculture.gouv.fr"
+                 aria-describedby="new-email-messages" />
+          <div class="fr-messages-group" id="new-email-messages" aria-live="polite"></div>
         </div>
-
-        <div class="fr-mt-2w">
-          <button id="btn-create-user" class="fr-btn">Créer le compte</button>
-        </div>
-
-        <div id="user-success" class="key-reveal" style="display: none">
-          <h3 class="key-reveal__title">Compte créé</h3>
-          <div class="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
-            <p>
-              Communiquez ce mot de passe à l'utilisateur, il ne sera plus
-              affiché.
-            </p>
+        <div class="fr-input-group" id="group-new-password">
+          <label class="fr-label" for="new-password">Mot de passe *</label>
+          <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+            <input class="fr-input" type="text" id="new-password" placeholder="12 caractères minimum"
+                   aria-describedby="new-password-messages" style="flex:1;" />
+            <button type="button" id="btn-generate-password" class="fr-btn fr-btn--secondary fr-btn--sm fr-icon-refresh-line" title="Générer un mot de passe"></button>
           </div>
-          <p class="key-reveal__meta">Mot de passe</p>
-          <div class="key-reveal__row">
-            <code id="user-password-value" class="key-reveal__value"></code>
-            <button
-              id="btn-copy-user-password"
-              class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line"
-            >
-              Copier
-            </button>
-          </div>
+          <div class="fr-messages-group" id="new-password-messages" aria-live="polite"></div>
         </div>
-      </section>
+        <div class="fr-input-group">
+          <label class="fr-label" for="new-is-admin">Rôle</label>
+          <select class="fr-select" id="new-is-admin">
+            <option value="false" selected>Utilisateur standard</option>
+            <option value="true">Administrateur</option>
+          </select>
+        </div>
+      </div>
 
-      <!-- ── Liste des utilisateurs ────────────────────────────────────── -->
-      <section class="grist-section">
-        <h2 class="grist-section__title">Utilisateurs existants</h2>
+      <div class="fr-mt-2w">
+        <button id="btn-create-user" class="fr-btn">Créer le compte</button>
+      </div>
 
-        <div class="account-list">
-          {% for user in users %}
-          <div class="account-card">
-            <div class="account-card__header">
-              <div class="account-card__info">
-                <div class="account-card__name-row">
-                  <span class="account-card__name">{{ user.email }}</span>
-                  {% if user.is_admin %}
-                  <span class="fr-badge fr-badge--sm fr-badge--info"
-                    >administrateur</span
-                  >
-                  {% endif %}
-                </div>
-                <div class="account-card__login">
-                  Créé le {{ user.created_at.strftime('%d/%m/%Y') }} {% if
-                  user.last_login_at %} · Dernière connexion le {{
-                  user.last_login_at.strftime('%d/%m/%Y à %H:%M') }} {% else %}
-                  · Jamais connecté {% endif %}
-                </div>
+      <div id="user-success" class="key-reveal" style="display:none;">
+        <h3 class="key-reveal__title">Compte créé</h3>
+        <div class="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
+          <p>Communiquez ce mot de passe à l'utilisateur, il ne sera plus affiché.</p>
+        </div>
+        <p class="key-reveal__meta">Mot de passe</p>
+        <div class="key-reveal__row">
+          <code id="user-password-value" class="key-reveal__value"></code>
+          <button id="btn-copy-user-password" class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line">Copier</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Liste des utilisateurs ────────────────────────────────────── -->
+    <section class="grist-section">
+      <h2 class="grist-section__title">Utilisateurs existants</h2>
+
+      <div class="account-list">
+        {% for user in users %}
+        <div class="account-card">
+          <div class="account-card__header">
+            <div class="account-card__info">
+              <div class="account-card__name-row">
+                <span class="account-card__name">{{ user.email }}</span>
+                {% if user.is_admin %}
+                <span class="fr-badge fr-badge--sm fr-badge--info">administrateur</span>
+                {% endif %}
               </div>
-              <div class="account-card__actions">
-                {% if user.id != current_user.id %}
-                <button
-                  class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-refresh-line"
-                  onclick="confirmResetPassword({{ user.id }}, {{ user.email|tojson }})"
-                >
-                  Réinitialiser le mot de passe
-                </button>
-                <button
-                  class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-delete-line"
-                  style="color: var(--text-default-error)"
-                  onclick="confirmDeleteUser({{ user.id }}, {{ user.email|tojson }})"
-                >
-                  Supprimer
-                </button>
+              <div class="account-card__login">
+                Créé le {{ user.created_at.strftime('%d/%m/%Y') }}
+                {% if user.last_login_at %}
+                  · Dernière connexion le {{ user.last_login_at.strftime('%d/%m/%Y à %H:%M') }}
                 {% else %}
-                <span class="fr-badge fr-badge--sm">vous</span>
+                  · Jamais connecté
                 {% endif %}
               </div>
             </div>
-            <div
-              id="reset-reveal-{{ user.id }}"
-              class="key-reveal"
-              style="display: none"
-            >
-              <div class="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
-                <p>
-                  Nouveau mot de passe généré — communiquez-le à l'utilisateur,
-                  il ne sera plus affiché.
-                </p>
-              </div>
-              <div class="key-reveal__row">
-                <code
-                  id="reset-value-{{ user.id }}"
-                  class="key-reveal__value"
-                ></code>
-                <button
-                  class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line"
-                  onclick="copyResetPassword({{ user.id }})"
-                >
-                  Copier
-                </button>
-              </div>
+            <div class="account-card__actions">
+              {% if user.id != current_user.id %}
+              <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-refresh-line"
+                      onclick="confirmResetPassword({{ user.id }}, {{ user.email|tojson }})">Réinitialiser le mot de passe</button>
+              <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-delete-line"
+                      style="color: var(--text-default-error);"
+                      onclick="confirmDeleteUser({{ user.id }}, {{ user.email|tojson }})">Supprimer</button>
+              {% else %}
+              <span class="fr-badge fr-badge--sm">vous</span>
+              {% endif %}
             </div>
           </div>
-          {% endfor %}
+          <div id="reset-reveal-{{ user.id }}" class="key-reveal" style="display:none;">
+            <div class="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
+              <p>Nouveau mot de passe généré — communiquez-le à l'utilisateur, il ne sera plus affiché.</p>
+            </div>
+            <div class="key-reveal__row">
+              <code id="reset-value-{{ user.id }}" class="key-reveal__value"></code>
+              <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line"
+                      onclick="copyResetPassword({{ user.id }})">Copier</button>
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+        {% endfor %}
+      </div>
+    </section>
 
-    <!-- Modale de confirmation -->
-    <dialog
-      id="confirm-modal"
-      class="fr-modal"
-      aria-labelledby="modal-title"
-      role="dialog"
-    >
-      <div class="fr-container fr-container--fluid fr-container-md">
-        <div class="fr-grid-row fr-grid-row--center">
-          <div class="fr-col-12 fr-col-md-8 fr-col-lg-6">
-            <div class="fr-modal__body">
-              <div class="fr-modal__header">
-                <button
-                  class="fr-btn--close fr-btn"
-                  aria-controls="confirm-modal"
-                >
-                  Fermer
-                </button>
-              </div>
-              <div class="fr-modal__content">
-                <h1 id="modal-title" class="fr-modal__title">Confirmation</h1>
-                <p id="modal-text"></p>
-              </div>
-              <div class="fr-modal__footer">
-                <div
-                  class="fr-btns-group fr-btns-group--right fr-btns-group--inline"
-                >
-                  <button
-                    class="fr-btn fr-btn--secondary"
-                    aria-controls="confirm-modal"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    id="modal-confirm-btn"
-                    class="fr-btn fr-btn--icon-left fr-icon-check-line"
-                  >
-                    Confirmer
-                  </button>
-                </div>
+  </main>
+
+  <!-- Modale de confirmation -->
+  <dialog id="confirm-modal" class="fr-modal" aria-labelledby="modal-title" role="dialog">
+    <div class="fr-container fr-container--fluid fr-container-md">
+      <div class="fr-grid-row fr-grid-row--center">
+        <div class="fr-col-12 fr-col-md-8 fr-col-lg-6">
+          <div class="fr-modal__body">
+            <div class="fr-modal__header">
+              <button class="fr-btn--close fr-btn" aria-controls="confirm-modal">Fermer</button>
+            </div>
+            <div class="fr-modal__content">
+              <h1 id="modal-title" class="fr-modal__title">Confirmation</h1>
+              <p id="modal-text"></p>
+            </div>
+            <div class="fr-modal__footer">
+              <div class="fr-btns-group fr-btns-group--right fr-btns-group--inline">
+                <button class="fr-btn fr-btn--secondary" aria-controls="confirm-modal">Annuler</button>
+                <button id="modal-confirm-btn" class="fr-btn fr-btn--icon-left fr-icon-check-line">Confirmer</button>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </dialog>
+    </div>
+  </dialog>
 
-    <div
-      id="toast-container"
-      class="fr-toast-container"
-      aria-live="polite"
-    ></div>
+  <div id="toast-container" class="fr-toast-container" aria-live="polite"></div>
 
-    <script
-      type="module"
-      src="{{ url_for('static', filename='dsfr/dsfr.module.min.js') }}"
-    ></script>
-    <script
-      type="text/javascript"
-      nomodule
-      src="{{ url_for('static', filename='dsfr/dsfr.nomodule.min.js') }}"
-    ></script>
+  <script type="module" src="{{ url_for('static', filename='dsfr/dsfr.module.min.js') }}"></script>
+  <script type="text/javascript" nomodule src="{{ url_for('static', filename='dsfr/dsfr.nomodule.min.js') }}"></script>
 
-    <script
-      defer
-      src="{{ url_for('static', filename='js/user-menu.js') }}"
-    ></script>
-    <script
-      defer
-      src="{{ url_for('static', filename='js/admin.js') }}"
-    ></script>
-  </body>
+  <script defer src="{{ url_for('static', filename='js/user-menu.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+</body>
 </html>

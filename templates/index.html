@@ -37,26 +37,26 @@
       </div>
 
       <div class="grist-header__actions">
-        <div class="fr-header__tools-links grist-user-menu">
-          <button class="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-left fr-icon-account-circle-line grist-user-menu__btn"
+        <div class="gm-usermenu">
+          <button class="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-left fr-icon-account-circle-line gm-usermenu__btn"
                   id="user-menu-btn" aria-expanded="false" aria-controls="user-menu-panel">
-            <span class="grist-user-menu__btn-label">{{ current_user.email }}</span>
-            <span class="grist-user-menu__chevron fr-icon-arrow-down-s-line" aria-hidden="true"></span>
+            <span class="gm-usermenu__btn-label">{{ current_user.email }}</span>
+            <span class="gm-usermenu__chevron fr-icon-arrow-down-s-line" aria-hidden="true"></span>
           </button>
 
-          <div class="grist-user-menu__panel" id="user-menu-panel" role="menu" hidden>
-            <div class="grist-user-menu__identity">
-              <p class="grist-user-menu__label">Connecté en tant que</p>
-              <p class="grist-user-menu__email">{{ current_user.email }}</p>
+          <div class="gm-usermenu__panel" id="user-menu-panel" role="menu" hidden>
+            <div class="gm-usermenu__identity">
+              <p class="gm-usermenu__label">Connecté en tant que</p>
+              <p class="gm-usermenu__email">{{ current_user.email }}</p>
               {% if current_user.is_admin %}
               <span class="fr-badge fr-badge--sm fr-badge--info fr-mt-1v">administrateur</span>
               {% endif %}
             </div>
 
-            <ul class="grist-user-menu__links" role="none">
+            <ul class="gm-usermenu__links" role="none">
               {% if current_user.is_admin %}
               <li role="none">
-                <a href="{{ url_for('admin_users') }}" role="menuitem" class="grist-user-menu__link">
+                <a href="{{ url_for('admin_users') }}" role="menuitem" class="gm-usermenu__link">
                   <span class="fr-icon-team-line" aria-hidden="true"></span>
                   Administration des comptes
                 </a>
@@ -64,7 +64,7 @@
               {% endif %}
             </ul>
 
-            <form method="POST" action="{{ url_for('logout') }}" class="grist-user-menu__logout">
+            <form method="POST" action="{{ url_for('logout') }}" class="gm-usermenu__logout">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <button type="submit" class="fr-btn fr-btn--secondary fr-btn--sm" style="width:100%;justify-content:center;">
                 Se déconnecter

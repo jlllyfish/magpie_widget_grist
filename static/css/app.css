@@ -70,11 +70,11 @@
 
 /* ── En-tête connectée (menu utilisateur) ────────────────────────────── */
 
-.grist-user-menu {
+.gm-usermenu {
   position: relative;
 }
 
-.grist-user-menu__btn {
+.gm-usermenu__btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -82,7 +82,7 @@
   min-width: 0;
 }
 
-.grist-user-menu__btn-label {
+.gm-usermenu__btn-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -90,16 +90,16 @@
   flex: 1 1 auto;
 }
 
-.grist-user-menu__chevron {
+.gm-usermenu__chevron {
   transition: transform 0.15s;
   flex-shrink: 0;
 }
 
-.grist-user-menu__btn[aria-expanded="true"] .grist-user-menu__chevron {
+.gm-usermenu__btn[aria-expanded="true"] .gm-usermenu__chevron {
   transform: rotate(180deg);
 }
 
-.grist-user-menu__panel {
+.gm-usermenu__panel {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
@@ -112,17 +112,17 @@
   z-index: 100;
 }
 
-.grist-user-menu__panel[hidden] {
+.gm-usermenu__panel[hidden] {
   display: none;
 }
 
-.grist-user-menu__identity {
+.gm-usermenu__identity {
   padding-bottom: 0.875rem;
   margin-bottom: 0.875rem;
   border-bottom: 1px solid var(--border-default-grey);
 }
 
-.grist-user-menu__label {
+.gm-usermenu__label {
   font-size: 0.6875rem;
   color: var(--text-mention-grey);
   text-transform: uppercase;
@@ -130,7 +130,7 @@
   margin: 0 0 0.25rem 0;
 }
 
-.grist-user-menu__email {
+.gm-usermenu__email {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-title-grey);
@@ -138,13 +138,13 @@
   word-break: break-word;
 }
 
-.grist-user-menu__links {
+.gm-usermenu__links {
   list-style: none;
   margin: 0 0 0.875rem 0;
   padding: 0;
 }
 
-.grist-user-menu__link {
+.gm-usermenu__link {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -154,20 +154,20 @@
   text-decoration: none;
 }
 
-.grist-user-menu__link:hover {
+.gm-usermenu__link:hover {
   text-decoration: underline;
 }
 
-.grist-user-menu__logout {
+.gm-usermenu__logout {
   margin: 0;
 }
 
 @media (max-width: 768px) {
-  .grist-user-menu__btn {
+  .gm-usermenu__btn {
     max-width: 200px;
   }
 
-  .grist-user-menu__panel {
+  .gm-usermenu__panel {
     right: 0;
     left: auto;
     min-width: 260px;
@@ -226,6 +226,8 @@
 .grist-accordion-body {
   padding: 1.25rem 0 0.5rem;
 }
+
+
 
 /* ── Main layout ─────────────────────────────────────────────────────── */
 
@@ -471,7 +473,7 @@
   transform: translateY(6px);
   transition: all 0.2s;
   max-width: 320px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
 
 .fr-toast.is-visible {
@@ -493,10 +495,10 @@
 
 /* ── Correctif modale DSFR ────────────────────────────────────────────── */
 /* La balise <dialog> doit etre invisible tant qu'elle n'a pas l'attribut
-  "open" (comportement natif du navigateur). Si le CSS DSFR charge par
-  install_dsfr.sh ne force pas ce masquage correctement selon la version,
-  la modale reste dans le flux normal et provoque un debordement horizontal
-  qui casse toute la mise en page (header compris). On le force nous-memes,
+   "open" (comportement natif du navigateur). Si le CSS DSFR charge par
+   install_dsfr.sh ne force pas ce masquage correctement selon la version,
+   la modale reste dans le flux normal et provoque un debordement horizontal
+   qui casse toute la mise en page (header compris). On le force nous-memes,
    independamment du DSFR, pour ne jamais en dependre sur ce point precis. */
 dialog.fr-modal:not([open]) {
   display: none !important;
