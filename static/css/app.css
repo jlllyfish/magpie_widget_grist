@@ -15,12 +15,16 @@
   padding: 0 1.5rem;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
 }
 
 .grist-header__brand {
   display: flex;
   align-items: center;
   gap: 1.25rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .grist-header__ministry-logo {
@@ -61,6 +65,7 @@
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* ── En-tête connectée (menu utilisateur) ────────────────────────────── */
@@ -218,8 +223,6 @@
 .grist-accordion-body {
   padding: 1.25rem 0 0.5rem;
 }
-
-
 
 /* ── Main layout ─────────────────────────────────────────────────────── */
 
@@ -465,7 +468,7 @@
   transform: translateY(6px);
   transition: all 0.2s;
   max-width: 320px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .fr-toast.is-visible {
