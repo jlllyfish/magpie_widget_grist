@@ -27,7 +27,7 @@
         </div>
       </div>
 
-      <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center;">
+      <div class="grist-header__actions">
         <a href="{{ url_for('index') }}" class="fr-btn fr-btn--secondary fr-btn--sm">Retour à l'application</a>
         <form method="POST" action="{{ url_for('logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />

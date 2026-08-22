@@ -24,7 +24,7 @@
 }
 
 .grist-header__ministry-logo {
-  height: 100px;
+  height: 64px;
   width: auto;
   flex-shrink: 0;
 }
@@ -56,11 +56,67 @@
   margin: 0;
 }
 
+.grist-header__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .grist-header {
+    padding: 1rem 0;
+  }
+
+  .grist-header__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.875rem;
+    padding: 0 1rem;
+  }
+
+  .grist-header__brand {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .grist-header__ministry-logo {
+    height: 40px;
+  }
+
+  .grist-header__separator {
+    height: 32px;
+  }
+
+  .grist-header__logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .grist-header__title {
+    font-size: 1.125rem;
+  }
+
+  .grist-header__subtitle {
+    font-size: 0.75rem;
+  }
+
+  /* Le conteneur des actions (Administration / Deconnexion) repasse
+     sous la marque au lieu de deborder a droite */
+  .grist-header__actions {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
 /* ── Accordion de configuration ──────────────────────────────────────── */
 
 .grist-accordion-body {
   padding: 1.25rem 0 0.5rem;
 }
+
+
 
 /* ── Main layout ─────────────────────────────────────────────────────── */
 
@@ -291,7 +347,7 @@
   transform: translateY(6px);
   transition: all 0.2s;
   max-width: 320px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
 
 .fr-toast.is-visible {
