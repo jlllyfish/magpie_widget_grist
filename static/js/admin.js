@@ -156,6 +156,7 @@ function confirmResetPassword(id, email) {
   document.getElementById('modal-title').textContent = 'Réinitialiser le mot de passe';
   document.getElementById('modal-text').textContent =
     `Générer un nouveau mot de passe pour « ${email} » ? L'ancien mot de passe ne fonctionnera plus.`;
+  document.getElementById('modal-confirm-btn').textContent = 'Réinitialiser';
   _modalCallback = async () => {
     try {
       const r = await fetch(`/api/admin/users/${id}/reset-password`, {
@@ -186,6 +187,7 @@ function confirmDeleteUser(id, email) {
   document.getElementById('modal-title').textContent = 'Supprimer l\'utilisateur';
   document.getElementById('modal-text').textContent =
     `Supprimer définitivement le compte « ${email} » ? Cette action est irréversible.`;
+  document.getElementById('modal-confirm-btn').textContent = 'Supprimer';
   _modalCallback = async () => {
     try {
       const r = await fetch(`/api/admin/users/${id}`, { method: 'DELETE', headers: csrfHeaders() });

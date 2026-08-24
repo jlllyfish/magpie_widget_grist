@@ -524,7 +524,8 @@ function confirmDelete(id, label) {
         if (d.error) throw new Error(d.error);
         loadAccounts();
       } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
-    }
+    },
+    'Supprimer'
   );
 }
 
@@ -532,10 +533,11 @@ function confirmDelete(id, label) {
 
 let _modalCallback = null;
 
-function openModal(title, text, cb) {
+function openModal(title, text, cb, confirmLabel) {
   _modalCallback = cb;
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-text').textContent  = text;
+  document.getElementById('modal-confirm-btn').textContent = confirmLabel || 'Confirmer';
   // API DSFR
   const modal = document.getElementById('confirm-modal');
   dsfr(modal).modal.disclose();
