@@ -138,10 +138,10 @@
             <div class="account-card__actions">
               {% if user.id != current_user.id %}
               <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-refresh-line"
-                      onclick="confirmResetPassword({{ user.id }}, {{ user.email|tojson }})">Réinitialiser le mot de passe</button>
+                      data-action="reset-password" data-user-id="{{ user.id }}" data-user-email="{{ user.email }}">Réinitialiser le mot de passe</button>
               <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-delete-line"
                       style="color: var(--text-default-error);"
-                      onclick="confirmDeleteUser({{ user.id }}, {{ user.email|tojson }})">Supprimer</button>
+                      data-action="delete-user" data-user-id="{{ user.id }}" data-user-email="{{ user.email }}">Supprimer</button>
               {% else %}
               <span class="fr-badge fr-badge--sm">vous</span>
               {% endif %}

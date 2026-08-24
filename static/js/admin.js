@@ -123,10 +123,10 @@ function addUserCardToList(user) {
       </div>
       <div class="account-card__actions">
         <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-refresh-line"
-                onclick="confirmResetPassword(${user.id}, '${esc(user.email)}')">Réinitialiser le mot de passe</button>
+                data-action="reset-password" data-user-id="${user.id}" data-user-email="${esc(user.email)}">Réinitialiser le mot de passe</button>
         <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-delete-line"
                 style="color: var(--text-default-error);"
-                onclick="confirmDeleteUser(${user.id}, '${esc(user.email)}')">Supprimer</button>
+                data-action="delete-user" data-user-id="${user.id}" data-user-email="${esc(user.email)}">Supprimer</button>
       </div>
     </div>
     <div id="reset-reveal-${user.id}" class="key-reveal" style="display:none;">
@@ -205,4 +205,25 @@ document.getElementById('modal-confirm-btn').addEventListener('click', () => {
   _modalCallback = null;
   const modal = document.getElementById('confirm-modal');
   dsfr(modal).modal.conceal();
+});
+
+// ─── Delegation d'evenements pour les actions par utilisateur ─────────────────
+// Evite d'injecter du JS inline via onclick="..." genere par Jinja, ce qui
+// posait un vrai probleme d'echappement quand l'email contenait des
+// guillemets (ex: filtre |tojson genere des " qui cassent l'attribut HTML
+// lui-meme delimite par des "). Les data-attributes sont echappes par
+// l'autoescape HTML de Jinja, donc surs dans tous les cas.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const id = parseInt(btn.dataset.userId, 10);
+  const email = btn.dataset.userEmail;
+
+  if (action === 'reset-password') {
+    confirmResetPassword(id, email);
+  } else if (action === 'delete-user') {
+    confirmDeleteUser(id, email);
+  }
 });
