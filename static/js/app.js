@@ -393,7 +393,10 @@ function docAccessSectionHTML(prefix) {
 
 // ─── List accounts ────────────────────────────────────────────────────────────
 
-document.getElementById('btn-refresh').addEventListener('click', loadAccounts);
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  document.getElementById('key-reveal').classList.remove('is-visible');
+  loadAccounts();
+});
 
 async function loadAccounts() {
   setLoading('btn-refresh', true);
