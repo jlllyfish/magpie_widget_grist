@@ -539,26 +539,3 @@ dialog.fr-modal:not([open]) {
   font-style: italic;
   margin-top: 0.5rem;
 }
-
-/* ── Champ mot de passe avec bouton generer ─────────────────────────── */
-
-.password-field-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.password-field-row .fr-input {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-}
-
-.password-field-row .fr-btn {
-  flex-shrink: 0;
-  height: 2.5rem;
-  min-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin: 0;
-}
