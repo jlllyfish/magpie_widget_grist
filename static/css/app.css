@@ -503,3 +503,32 @@
 dialog.fr-modal:not([open]) {
   display: none !important;
 }
+
+/* ── Documents lies a un compte de service ───────────────────────────── */
+
+.account-card__doc-links {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.account-card__doc-link {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-mention-grey);
+}
+
+.account-card__doc-link-name {
+  font-family: "Courier New", monospace;
+}
+
+.account-card__doc-links-loading,
+.account-card__doc-links-error {
+  font-size: 0.75rem;
+  color: var(--text-mention-grey);
+  font-style: italic;
+  margin-top: 0.5rem;
+}

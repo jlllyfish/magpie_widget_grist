@@ -17,7 +17,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
-from models import db, User
+from models import db, User, ServiceAccountDocLink
 
 load_dotenv()
 
@@ -281,6 +281,153 @@ def list_accounts():
     except requests.exceptions.RequestException as e:
         app.logger.error("Erreur liste comptes : %s", e)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/grist/orgs", methods=["GET"])
+@api_login_required
+def list_orgs():
+    """Liste les organisations (sites/espaces personnels) accessibles avec la cle configuree."""
+    cfg = get_config()
+    if not cfg["key"]:
+        return jsonify({"error": "Clé API non configurée"}), 401
+    try:
+        r = requests.get(
+            f"{cfg['url']}/api/orgs",
+            headers=api_headers(cfg["key"]),
+            timeout=10,
+        )
+        r.raise_for_status()
+        return jsonify(r.json())
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erreur liste organisations : %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/grist/orgs/<org_id>/workspaces", methods=["GET"])
+@api_login_required
+def list_workspaces(org_id):
+    """Liste les espaces de travail et documents d'une organisation."""
+    cfg = get_config()
+    if not cfg["key"]:
+        return jsonify({"error": "Clé API non configurée"}), 401
+    try:
+        r = requests.get(
+            f"{cfg['url']}/api/orgs/{org_id}/workspaces",
+            headers=api_headers(cfg["key"]),
+            timeout=10,
+        )
+        r.raise_for_status()
+        return jsonify(r.json())
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erreur liste espaces de travail : %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/grist/docs/<doc_id>/access", methods=["PATCH"])
+@api_login_required
+@limiter.limit("30 per hour")
+def grant_doc_access(doc_id):
+    """Donne acces a un document Grist pour un login (typiquement un compte de service)."""
+    cfg = get_config()
+    if not cfg["key"]:
+        return jsonify({"error": "Clé API non configurée"}), 401
+
+    body = request.get_json(silent=True) or {}
+    login = (body.get("login") or "").strip()
+    role = (body.get("role") or "editors").strip()
+
+    if not login:
+        return jsonify({"error": "Login manquant"}), 400
+    if role not in ("editors", "owners"):
+        return jsonify({"error": "Rôle invalide"}), 400
+
+    payload = {"delta": {"users": {login: role}}}
+
+    try:
+        r = requests.patch(
+            f"{cfg['url']}/api/docs/{doc_id}/access",
+            headers=api_headers(cfg["key"]),
+            json=payload,
+            timeout=10,
+        )
+        r.raise_for_status()
+        app.logger.info(
+            "Acces document accorde par %s : login=%s doc=%s role=%s",
+            current_user.email, login, doc_id, role,
+        )
+
+        # Enregistre le lien (login <-> doc) s'il n'existe pas deja,
+        # pour pouvoir l'afficher plus tard sans avoir a scanner tous
+        # les documents accessibles.
+        existing = ServiceAccountDocLink.query.filter_by(
+            service_account_login=login, doc_id=doc_id
+        ).first()
+        if not existing:
+            link = ServiceAccountDocLink(service_account_login=login, doc_id=doc_id)
+            db.session.add(link)
+            db.session.commit()
+
+        return jsonify({"ok": True})
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erreur attribution acces document : %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/service-accounts/<login>/doc-links", methods=["GET"])
+@api_login_required
+def get_service_account_doc_links(login):
+    """
+    Renvoie les documents auxquels ce compte de service a ete rattache via
+    Magpie, avec leur nom et le role actuel du compte -- toujours recuperes
+    en direct depuis Grist pour ne jamais etre desynchronises.
+    """
+    cfg = get_config()
+    if not cfg["key"]:
+        return jsonify({"error": "Clé API non configurée"}), 401
+
+    links = ServiceAccountDocLink.query.filter_by(service_account_login=login).all()
+    results = []
+
+    for link in links:
+        try:
+            # Nom du document
+            r_doc = requests.get(
+                f"{cfg['url']}/api/docs/{link.doc_id}",
+                headers=api_headers(cfg["key"]),
+                timeout=10,
+            )
+            r_doc.raise_for_status()
+            doc_data = r_doc.json()
+
+            # Role actuel du compte sur ce document
+            r_access = requests.get(
+                f"{cfg['url']}/api/docs/{link.doc_id}/access",
+                headers=api_headers(cfg["key"]),
+                timeout=10,
+            )
+            r_access.raise_for_status()
+            access_data = r_access.json()
+            role = next(
+                (u.get("access") for u in access_data.get("users", []) if u.get("email") == login),
+                None,
+            )
+
+            results.append({
+                "docId": link.doc_id,
+                "docName": doc_data.get("name", link.doc_id),
+                "role": role,
+            })
+        except requests.exceptions.RequestException as e:
+            app.logger.warning("Impossible de recuperer le doc %s pour %s : %s", link.doc_id, login, e)
+            # Le lien existe toujours mais le document est peut-etre
+            # inaccessible/supprime -- on l'affiche quand meme avec un role nul
+            results.append({
+                "docId": link.doc_id,
+                "docName": link.doc_id,
+                "role": None,
+            })
+
+    return jsonify(results)
 
 
 @app.route("/api/service-accounts", methods=["POST"])

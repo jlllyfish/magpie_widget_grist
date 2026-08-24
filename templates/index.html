@@ -169,6 +169,51 @@
             Copier
           </button>
         </div>
+
+        <!-- Ajout optionnel comme editeur/proprietaire d'un document -->
+        <div class="fr-mt-3w" style="border-top:1px solid var(--border-default-grey);padding-top:1rem;">
+          <div class="fr-checkbox-group">
+            <input type="checkbox" id="chk-add-to-doc-create" />
+            <label class="fr-label" for="chk-add-to-doc-create">
+              Ajouter ce compte à un document Grist
+            </label>
+          </div>
+
+          <div id="doc-access-panel-create" style="display:none;" class="fr-mt-2w">
+            <div class="grist-grid-3">
+              <div class="fr-select-group">
+                <label class="fr-label" for="sel-org-create">Organisation</label>
+                <select class="fr-select" id="sel-org-create">
+                  <option value="">Chargement…</option>
+                </select>
+              </div>
+              <div class="fr-select-group">
+                <label class="fr-label" for="sel-doc-create">Document</label>
+                <select class="fr-select" id="sel-doc-create" disabled>
+                  <option value="">Choisir une organisation d'abord</option>
+                </select>
+              </div>
+              <div class="fr-select-group">
+                <label class="fr-label" for="sel-role-create">Rôle</label>
+                <select class="fr-select" id="sel-role-create">
+                  <option value="editors" selected>Éditeur</option>
+                  <option value="owners">Propriétaire</option>
+                </select>
+              </div>
+            </div>
+
+            <button id="btn-grant-access-create" class="fr-btn fr-btn--secondary fr-mt-2w" disabled>
+              Ajouter au document
+            </button>
+
+            <div id="doc-access-success-create" class="fr-alert fr-alert--success fr-alert--sm fr-mt-2w" style="display:none;">
+              <p>Compte ajouté au document avec succès.</p>
+            </div>
+            <div id="doc-access-error-create" class="fr-alert fr-alert--error fr-alert--sm fr-mt-2w" style="display:none;">
+              <p></p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
