@@ -199,6 +199,10 @@ document.getElementById('btn-copy-login').addEventListener('click', () => {
   navigator.clipboard.writeText(login);
 });
 
+document.getElementById('btn-close-key-reveal').addEventListener('click', () => {
+  document.getElementById('key-reveal').classList.remove('is-visible');
+});
+
 // ─── Ajout comme editeur/proprietaire d'un document (generique) ───────────────
 // Reutilisable a la fois pour le compte fraichement cree et pour les comptes
 // existants dans la liste -- chaque instance est identifiee par un prefixe

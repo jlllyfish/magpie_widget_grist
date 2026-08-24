@@ -148,7 +148,12 @@
 
       <!-- Révélation de la clé -->
       <div id="key-reveal" class="key-reveal" role="alert">
-        <h3 class="key-reveal__title">Clé générée</h3>
+        <div class="key-reveal__header">
+          <h3 class="key-reveal__title">Clé générée</h3>
+          <button id="btn-close-key-reveal" type="button" class="fr-btn fr-btn--sm">
+            Fermer
+          </button>
+        </div>
 
         <div class="fr-alert fr-alert--info fr-alert--sm fr-mb-2w">
           <p>Copiez votre clé API maintenant, elle ne sera plus affichée.</p>

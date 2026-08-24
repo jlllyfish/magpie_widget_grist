@@ -307,11 +307,18 @@
   display: block;
 }
 
+.key-reveal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
 .key-reveal__title {
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--text-title-grey);
-  margin: 0 0 1rem 0;
+  margin: 0;
 }
 
 .key-reveal__value {
