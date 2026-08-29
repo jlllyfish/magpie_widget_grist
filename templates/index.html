@@ -35,44 +35,6 @@
           <p class="grist-header__subtitle">Gestionnaire de comptes de service Grist</p>
         </div>
       </div>
-
-      <div class="grist-header__actions">
-        <div class="gm-usermenu">
-          <button class="fr-btn fr-btn--tertiary fr-btn--sm fr-btn--icon-left fr-icon-account-circle-line gm-usermenu__btn"
-                  id="user-menu-btn" aria-expanded="false" aria-controls="user-menu-panel">
-            <span class="gm-usermenu__btn-label">{{ current_user.email }}</span>
-            <span class="gm-usermenu__chevron fr-icon-arrow-down-s-line" aria-hidden="true"></span>
-          </button>
-
-          <div class="gm-usermenu__panel" id="user-menu-panel" role="menu" hidden>
-            <div class="gm-usermenu__identity">
-              <p class="gm-usermenu__label">Connecté en tant que</p>
-              <p class="gm-usermenu__email">{{ current_user.email }}</p>
-              {% if current_user.is_admin %}
-              <span class="fr-badge fr-badge--sm fr-badge--info fr-mt-1v">administrateur</span>
-              {% endif %}
-            </div>
-
-            <ul class="gm-usermenu__links" role="none">
-              {% if current_user.is_admin %}
-              <li role="none">
-                <a href="{{ url_for('admin_users') }}" role="menuitem" class="gm-usermenu__link">
-                  <span class="fr-icon-team-line" aria-hidden="true"></span>
-                  Administration des comptes
-                </a>
-              </li>
-              {% endif %}
-            </ul>
-
-            <form method="POST" action="{{ url_for('logout') }}" class="gm-usermenu__logout">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-              <button type="submit" class="fr-btn fr-btn--secondary fr-btn--sm" style="width:100%;justify-content:center;">
-                Se déconnecter
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
     </div>
   </header>
 
@@ -180,24 +142,12 @@
           <div class="fr-checkbox-group">
             <input type="checkbox" id="chk-add-to-doc-create" />
             <label class="fr-label" for="chk-add-to-doc-create">
-              Ajouter ce compte à un document Grist
+              Ajouter ce compte à ce document Grist
             </label>
           </div>
 
           <div id="doc-access-panel-create" style="display:none;" class="fr-mt-2w">
             <div class="grist-grid-3">
-              <div class="fr-select-group">
-                <label class="fr-label" for="sel-org-create">Organisation</label>
-                <select class="fr-select" id="sel-org-create">
-                  <option value="">Chargement…</option>
-                </select>
-              </div>
-              <div class="fr-select-group">
-                <label class="fr-label" for="sel-doc-create">Document</label>
-                <select class="fr-select" id="sel-doc-create" disabled>
-                  <option value="">Choisir une organisation d'abord</option>
-                </select>
-              </div>
               <div class="fr-select-group">
                 <label class="fr-label" for="sel-role-create">Rôle</label>
                 <select class="fr-select" id="sel-role-create">
@@ -207,7 +157,7 @@
               </div>
             </div>
 
-            <button id="btn-grant-access-create" class="fr-btn fr-btn--secondary fr-mt-2w" disabled>
+            <button id="btn-grant-access-create" class="fr-btn fr-btn--secondary fr-mt-2w">
               Ajouter au document
             </button>
 
@@ -279,8 +229,12 @@
   <script type="module" src="{{ url_for('static', filename='dsfr/dsfr.module.min.js') }}"></script>
   <script type="text/javascript" nomodule src="{{ url_for('static', filename='dsfr/dsfr.nomodule.min.js') }}"></script>
 
+  <!-- Grist Widget API (charge sans erreur meme hors contexte Grist -->
+  <!-- widget.js gere l'absence de l'objet 'grist' proprement) -->
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+
   <!-- App JS -->
-  <script defer src="{{ url_for('static', filename='js/user-menu.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='js/widget.js') }}"></script>
   <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
 
 </body>

@@ -1,23 +1,17 @@
 import os
 import re
 import logging
-import secrets
-from functools import wraps
 
 import requests
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, session
 from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_login import (
-    LoginManager, login_user, logout_user, login_required,
-    current_user, UserMixin,
-)
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
-from models import db, User, ServiceAccountDocLink
+from models import db, ServiceAccountDocLink
 
 load_dotenv()
 
@@ -38,16 +32,23 @@ app.secret_key = FLASK_SECRET
 # ─── Base de donnees ────────────────────────────────────────────────────────────
 # DATABASE_PATH pointe vers le volume persistant Railway (ex: /data/app.db)
 # En local, retombe sur un fichier a la racine du projet.
+# Utilisee uniquement pour ServiceAccountDocLink (mapping login <-> doc).
 DATABASE_PATH = os.environ.get("DATABASE_PATH", "app.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATABASE_PATH}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 # ─── Cookies de session durcis ─────────────────────────────────────────────────
+# Meme sans compte utilisateur, la session sert a stocker la config Grist
+# (URL + cle API) le temps de l'usage du widget.
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
+# SameSite=None + Secure : requis pour que le cookie de session fonctionne
+# lorsque Magpie est charge en iframe cross-site dans un document Grist.
+# Sans ca, la plupart des navigateurs modernes bloqueraient le cookie
+# (protection anti-tracking sur les iframes tierces).
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True  # obligatoire avec SameSite=None
 
 DEFAULT_GRIST_URL = os.environ.get("GRIST_URL", "")
 
@@ -62,140 +63,6 @@ limiter = Limiter(
     default_limits=["200 per hour"],
     storage_uri="memory://",
 )
-
-# ─── Flask-Login ──────────────────────────────────────────────────────────────
-login_manager = LoginManager(app)
-login_manager.login_view = "login"
-login_manager.login_message = None  # on gere nous-memes l'affichage
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(User, int(user_id))
-
-
-def admin_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            return jsonify({"error": "Acces reserve aux administrateurs"}), 403
-        return f(*args, **kwargs)
-    return wrapper
-
-
-def api_login_required(f):
-    """Variante API : renvoie 401 JSON plutot qu'une redirection HTML."""
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return jsonify({"error": "Authentification requise"}), 401
-        return f(*args, **kwargs)
-    return wrapper
-
-
-# ─── Authentification ────────────────────────────────────────────────────────
-
-@app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
-def login():
-    error = None
-    if request.method == "POST":
-        email = (request.form.get("email") or "").strip().lower()
-        password = request.form.get("password", "")
-
-        user = User.query.filter_by(email=email).first()
-        # Comparaison constante meme si l'utilisateur n'existe pas,
-        # pour ne pas laisser deviner par le temps de reponse si l'email existe
-        if user and user.check_password(password):
-            login_user(user, remember=False)
-            user.last_login_at = datetime.now(timezone.utc)
-            db.session.commit()
-            return redirect(url_for("index"))
-        error = "Email ou mot de passe incorrect."
-    return render_template("login.html", error=error)
-
-
-@app.route("/logout", methods=["POST"])
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for("login"))
-
-
-# ─── Administration des comptes (reservee aux admins) ─────────────────────────
-
-@app.route("/admin/users", methods=["GET"])
-@login_required
-def admin_users():
-    if not current_user.is_admin:
-        return redirect(url_for("index"))
-    users = User.query.order_by(User.created_at.desc()).all()
-    return render_template("admin_users.html", users=users)
-
-
-@app.route("/api/admin/generate-password", methods=["GET"])
-@admin_required
-def generate_password():
-    """Genere un mot de passe fort aleatoire, jamais stocke tel quel."""
-    alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
-    password = "".join(secrets.choice(alphabet) for _ in range(16))
-    return jsonify({"password": password})
-
-
-@app.route("/api/admin/users", methods=["POST"])
-@admin_required
-@limiter.limit("20 per hour")
-def create_user():
-    data = request.get_json(silent=True) or {}
-    email = (data.get("email") or "").strip().lower()
-    password = data.get("password") or ""
-    is_admin = bool(data.get("is_admin", False))
-
-    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-        return jsonify({"error": "Adresse email invalide"}), 400
-    if len(password) < 12:
-        return jsonify({"error": "Le mot de passe doit faire au moins 12 caracteres"}), 400
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Un compte existe deja avec cet email"}), 409
-
-    user = User(email=email, is_admin=is_admin)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-
-    app.logger.info("Utilisateur cree par %s : %s", current_user.email, email)
-    return jsonify({"ok": True, "id": user.id, "email": user.email, "is_admin": user.is_admin})
-
-
-@app.route("/api/admin/users/<int:user_id>/reset-password", methods=["POST"])
-@admin_required
-@limiter.limit("20 per hour")
-def reset_user_password(user_id):
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"error": "Utilisateur introuvable"}), 404
-
-    alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789"
-    new_password = "".join(secrets.choice(alphabet) for _ in range(16))
-    user.set_password(new_password)
-    db.session.commit()
-
-    app.logger.info("Mot de passe reinitialise par %s pour : %s", current_user.email, user.email)
-    return jsonify({"ok": True, "password": new_password})
-
-
-@app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
-@admin_required
-def delete_user(user_id):
-    if user_id == current_user.id:
-        return jsonify({"error": "Vous ne pouvez pas supprimer votre propre compte"}), 400
-    user = db.session.get(User, user_id)
-    if not user:
-        return jsonify({"error": "Utilisateur introuvable"}), 404
-    db.session.delete(user)
-    db.session.commit()
-    app.logger.info("Utilisateur supprime par %s : %s", current_user.email, user.email)
-    return jsonify({"ok": True})
 
 
 # ─── Validation d'entrees (SSRF) ────────────────────────────────────────────────
@@ -232,9 +99,11 @@ def redact(key):
 
 
 # ─── Routes applicatives ────────────────────────────────────────────────────────
+# Aucune authentification Magpie : la cle API Grist saisie par l'utilisateur
+# EST l'autorisation. Elle n'est jamais stockee en base, uniquement en
+# session serveur, jamais renvoyee au client.
 
 @app.route("/")
-@login_required
 def index():
     cfg = get_config()
     return render_template(
@@ -245,7 +114,6 @@ def index():
 
 
 @app.route("/api/config", methods=["POST"])
-@api_login_required
 @limiter.limit("10 per minute")
 def set_config():
     data = request.get_json(silent=True) or {}
@@ -259,13 +127,12 @@ def set_config():
 
     if key:
         session["api_key"] = key
-        app.logger.info("Cle API mise a jour en session par %s : %s", current_user.email, redact(key))
+        app.logger.info("Cle API mise a jour en session : %s", redact(key))
 
     return jsonify({"ok": True})
 
 
 @app.route("/api/service-accounts", methods=["GET"])
-@api_login_required
 def list_accounts():
     cfg = get_config()
     if not cfg["key"]:
@@ -283,48 +150,7 @@ def list_accounts():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/grist/orgs", methods=["GET"])
-@api_login_required
-def list_orgs():
-    """Liste les organisations (sites/espaces personnels) accessibles avec la cle configuree."""
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
-    try:
-        r = requests.get(
-            f"{cfg['url']}/api/orgs",
-            headers=api_headers(cfg["key"]),
-            timeout=10,
-        )
-        r.raise_for_status()
-        return jsonify(r.json())
-    except requests.exceptions.RequestException as e:
-        app.logger.error("Erreur liste organisations : %s", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/grist/orgs/<org_id>/workspaces", methods=["GET"])
-@api_login_required
-def list_workspaces(org_id):
-    """Liste les espaces de travail et documents d'une organisation."""
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
-    try:
-        r = requests.get(
-            f"{cfg['url']}/api/orgs/{org_id}/workspaces",
-            headers=api_headers(cfg["key"]),
-            timeout=10,
-        )
-        r.raise_for_status()
-        return jsonify(r.json())
-    except requests.exceptions.RequestException as e:
-        app.logger.error("Erreur liste espaces de travail : %s", e)
-        return jsonify({"error": str(e)}), 500
-
-
 @app.route("/api/grist/docs/<doc_id>/access", methods=["PATCH"])
-@api_login_required
 @limiter.limit("30 per hour")
 def grant_doc_access(doc_id):
     """Donne acces a un document Grist pour un login (typiquement un compte de service)."""
@@ -351,10 +177,7 @@ def grant_doc_access(doc_id):
             timeout=10,
         )
         r.raise_for_status()
-        app.logger.info(
-            "Acces document accorde par %s : login=%s doc=%s role=%s",
-            current_user.email, login, doc_id, role,
-        )
+        app.logger.info("Acces document accorde : login=%s doc=%s role=%s", login, doc_id, role)
 
         # Enregistre le lien (login <-> doc) s'il n'existe pas deja,
         # pour pouvoir l'afficher plus tard sans avoir a scanner tous
@@ -374,7 +197,6 @@ def grant_doc_access(doc_id):
 
 
 @app.route("/api/service-accounts/<login>/doc-links", methods=["GET"])
-@api_login_required
 def get_service_account_doc_links(login):
     """
     Renvoie les documents auxquels ce compte de service a ete rattache via
@@ -431,7 +253,6 @@ def get_service_account_doc_links(login):
 
 
 @app.route("/api/service-accounts", methods=["POST"])
-@api_login_required
 @limiter.limit("20 per hour")
 def create_account():
     cfg = get_config()
@@ -467,7 +288,7 @@ def create_account():
         )
         r.raise_for_status()
         data = r.json()
-        app.logger.info("Compte cree par %s : login=%s", current_user.email, data.get("login", "?"))
+        app.logger.info("Compte cree : login=%s", data.get("login", "?"))
         return jsonify(data)
     except requests.exceptions.RequestException as e:
         app.logger.error("Erreur creation compte : %s", e)
@@ -475,7 +296,6 @@ def create_account():
 
 
 @app.route("/api/service-accounts/<int:account_id>", methods=["DELETE"])
-@api_login_required
 @limiter.limit("30 per hour")
 def delete_account(account_id):
     cfg = get_config()
@@ -488,7 +308,7 @@ def delete_account(account_id):
             timeout=10,
         )
         r.raise_for_status()
-        app.logger.info("Compte supprime par %s : #%d", current_user.email, account_id)
+        app.logger.info("Compte supprime : #%d", account_id)
         return jsonify({"ok": True})
     except requests.exceptions.RequestException as e:
         app.logger.error("Erreur suppression #%d : %s", account_id, e)
@@ -499,7 +319,15 @@ def delete_account(account_id):
 
 @app.after_request
 def set_security_headers(response):
-    response.headers["X-Frame-Options"] = "DENY"
+    # PAS de X-Frame-Options: DENY ici -- Magpie doit pouvoir etre charge
+    # en iframe par Grist pour fonctionner comme widget custom. A la place,
+    # on utilise une Content-Security-Policy frame-ancestors qui restreint
+    # precisement quels domaines ont le droit de nous embarquer.
+    allowed_frame_ancestors = os.environ.get(
+        "ALLOWED_FRAME_ANCESTORS",
+        "https://grist.numerique.gouv.fr"
+    )
+    response.headers["Content-Security-Policy"] = f"frame-ancestors {allowed_frame_ancestors}"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     return response
@@ -509,21 +337,6 @@ def set_security_headers(response):
 
 with app.app_context():
     db.create_all()
-    # Cree un premier compte admin si la table est vide (bootstrap)
-    if User.query.count() == 0:
-        bootstrap_email = os.environ.get("ADMIN_EMAIL")
-        bootstrap_password = os.environ.get("ADMIN_PASSWORD")
-        if bootstrap_email and bootstrap_password:
-            admin = User(email=bootstrap_email.strip().lower(), is_admin=True)
-            admin.set_password(bootstrap_password)
-            db.session.add(admin)
-            db.session.commit()
-            app.logger.info("Compte administrateur initial cree : %s", bootstrap_email)
-        else:
-            app.logger.warning(
-                "Aucun utilisateur en base et ADMIN_EMAIL/ADMIN_PASSWORD non definis. "
-                "Definissez-les dans .env pour creer le premier compte admin au demarrage."
-            )
 
 
 if __name__ == "__main__":

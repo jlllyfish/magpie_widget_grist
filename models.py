@@ -1,41 +1,16 @@
 """
 Modeles de base de donnees.
 
-Un seul modele pour l'instant : User.
-Les mots de passe ne sont JAMAIS stockes en clair -- uniquement leur hash
-(werkzeug.security utilise scrypt par defaut, robuste et sans dependance
-supplementaire).
+Pas de table utilisateur : ce fork widget n'a pas d'authentification
+propre. La cle API Grist saisie par l'utilisateur (stockee uniquement en
+session serveur, jamais en base) fait office d'autorisation.
 """
 
 from datetime import datetime, timezone
 
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
-
-
-class User(UserMixin, db.Model):
-    __tablename__ = "users"
-
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    last_login_at = db.Column(db.DateTime, nullable=True)
-
-    def set_password(self, raw_password):
-        """Hache le mot de passe -- jamais stocke en clair."""
-        self.password_hash = generate_password_hash(raw_password)
-
-    def check_password(self, raw_password):
-        """Verifie le mot de passe fourni contre le hash stocke."""
-        return check_password_hash(self.password_hash, raw_password)
-
-    def __repr__(self):
-        return f"<User {self.email}>"
 
 
 class ServiceAccountDocLink(db.Model):

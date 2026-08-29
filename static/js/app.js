@@ -208,7 +208,6 @@ document.getElementById('btn-close-key-reveal').addEventListener('click', () => 
 // existants dans la liste -- chaque instance est identifiee par un prefixe
 // d'id unique (ex: "create" ou "acc-42").
 
-const _orgsCachePerPrefix = {};
 let _createSectionLogin = null;
 let _createSectionInitialized = false;
 
@@ -218,79 +217,39 @@ function resetDocAccessPanel(prefix) {
   document.getElementById(`doc-access-panel-${prefix}`).style.display = 'none';
   document.getElementById(`doc-access-success-${prefix}`).style.display = 'none';
   document.getElementById(`doc-access-error-${prefix}`).style.display = 'none';
-  document.getElementById(`btn-grant-access-${prefix}`).disabled = true;
-  document.getElementById(`sel-doc-${prefix}`).innerHTML = '<option value="">Choisir une organisation d\'abord</option>';
-  document.getElementById(`sel-doc-${prefix}`).disabled = true;
-  delete _orgsCachePerPrefix[prefix];
 }
 
 function initDocAccessSection(prefix, loginOrGetter) {
   const getLogin = typeof loginOrGetter === 'function' ? loginOrGetter : () => loginOrGetter;
   const chk = document.getElementById(`chk-add-to-doc-${prefix}`);
   const panel = document.getElementById(`doc-access-panel-${prefix}`);
-  const selOrg = document.getElementById(`sel-org-${prefix}`);
-  const selDoc = document.getElementById(`sel-doc-${prefix}`);
   const selRole = document.getElementById(`sel-role-${prefix}`);
   const btnGrant = document.getElementById(`btn-grant-access-${prefix}`);
   const successEl = document.getElementById(`doc-access-success-${prefix}`);
   const errorEl = document.getElementById(`doc-access-error-${prefix}`);
 
-  chk.addEventListener('change', async (e) => {
-    if (e.target.checked) {
-      panel.style.display = 'block';
-      if (!_orgsCachePerPrefix[prefix]) await loadOrgsIntoSelect(selOrg, prefix);
-    } else {
-      panel.style.display = 'none';
-    }
-  });
-
-  selOrg.addEventListener('change', async (e) => {
-    const orgId = e.target.value;
-    btnGrant.disabled = true;
-
-    if (!orgId) {
-      selDoc.innerHTML = '<option value="">Choisir une organisation d\'abord</option>';
-      selDoc.disabled = true;
-      return;
-    }
-
-    selDoc.innerHTML = '<option value="">Chargement…</option>';
-    selDoc.disabled = true;
-
-    try {
-      const r = await fetch(`/api/grist/orgs/${orgId}/workspaces`);
-      const workspaces = await r.json();
-      if (workspaces.error) throw new Error(workspaces.error);
-
-      selDoc.innerHTML = '<option value="">Sélectionner…</option>';
-      workspaces.forEach(ws => {
-        (ws.docs || []).forEach(doc => {
-          const opt = document.createElement('option');
-          opt.value = doc.id;
-          opt.textContent = `${ws.name} / ${doc.name}`;
-          selDoc.appendChild(opt);
-        });
-      });
-      selDoc.disabled = false;
-    } catch (e) {
-      selDoc.innerHTML = '<option value="">Erreur de chargement</option>';
-      showToast('Erreur : ' + e.message, 'error');
-    }
-  });
-
-  selDoc.addEventListener('change', (e) => {
-    btnGrant.disabled = !e.target.value;
+  chk.addEventListener('change', (e) => {
+    panel.style.display = e.target.checked ? 'block' : 'none';
   });
 
   btnGrant.addEventListener('click', async () => {
-    const docId = selDoc.value;
+    // Le docId vient directement de l'API Grist (fiable, non modifiable
+    // par l'utilisateur) -- widget.js l'a recupere a l'ouverture.
+    const docId = window.MagpieWidget && window.MagpieWidget.docId;
     const role = selRole.value;
     const login = getLogin();
 
     successEl.style.display = 'none';
     errorEl.style.display = 'none';
 
-    if (!docId || !login) return;
+    if (!login) return;
+
+    if (!docId) {
+      errorEl.querySelector('p').textContent =
+        'Document introuvable : Magpie doit être ouvert comme widget dans un document Grist pour utiliser cette fonctionnalité.';
+      errorEl.style.display = 'block';
+      return;
+    }
 
     btnGrant.disabled = true;
 
@@ -318,59 +277,18 @@ function initDocAccessSection(prefix, loginOrGetter) {
   });
 }
 
-async function loadOrgsIntoSelect(selOrg, prefix) {
-  selOrg.innerHTML = '<option value="">Chargement…</option>';
-  try {
-    const r = await fetch('/api/grist/orgs');
-    const orgs = await r.json();
-    if (orgs.error) throw new Error(orgs.error);
-
-    selOrg.innerHTML = '<option value="">Sélectionner…</option>';
-    orgs.forEach(org => {
-      const opt = document.createElement('option');
-      opt.value = org.id;
-      // Distingue les espaces "Personal" homonymes en ajoutant le nom
-      // du proprietaire ou le domaine, quand disponibles
-      let label = org.name;
-      if (org.owner && org.owner.name && org.owner.name !== org.name) {
-        label += ` (${org.owner.name})`;
-      } else if (org.domain) {
-        label += ` (${org.domain})`;
-      }
-      opt.textContent = label;
-      selOrg.appendChild(opt);
-    });
-    _orgsCachePerPrefix[prefix] = orgs;
-  } catch (e) {
-    selOrg.innerHTML = '<option value="">Erreur de chargement</option>';
-    showToast('Erreur : ' + e.message, 'error');
-  }
-}
-
 function docAccessSectionHTML(prefix) {
   return `
     <div class="fr-mt-3w" style="border-top:1px solid var(--border-default-grey);padding-top:1rem;">
       <div class="fr-checkbox-group">
         <input type="checkbox" id="chk-add-to-doc-${prefix}" />
         <label class="fr-label" for="chk-add-to-doc-${prefix}">
-          Ajouter ce compte à un document Grist
+          Ajouter ce compte à ce document Grist
         </label>
       </div>
 
       <div id="doc-access-panel-${prefix}" style="display:none;" class="fr-mt-2w">
         <div class="grist-grid-3">
-          <div class="fr-select-group">
-            <label class="fr-label" for="sel-org-${prefix}">Organisation</label>
-            <select class="fr-select" id="sel-org-${prefix}">
-              <option value="">Chargement…</option>
-            </select>
-          </div>
-          <div class="fr-select-group">
-            <label class="fr-label" for="sel-doc-${prefix}">Document</label>
-            <select class="fr-select" id="sel-doc-${prefix}" disabled>
-              <option value="">Choisir une organisation d'abord</option>
-            </select>
-          </div>
           <div class="fr-select-group">
             <label class="fr-label" for="sel-role-${prefix}">Rôle</label>
             <select class="fr-select" id="sel-role-${prefix}">
@@ -380,7 +298,7 @@ function docAccessSectionHTML(prefix) {
           </div>
         </div>
 
-        <button id="btn-grant-access-${prefix}" class="fr-btn fr-btn--secondary fr-mt-2w" disabled>
+        <button id="btn-grant-access-${prefix}" class="fr-btn fr-btn--secondary fr-mt-2w">
           Ajouter au document
         </button>
 
@@ -582,17 +500,23 @@ function esc(s) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-loadAccounts();
+// On attend que la detection du contexte widget (widget.js) soit terminee
+// avant de charger les comptes, pour que isWidget/docId soient fiables
+// des le premier rendu (docAccessSectionHTML en depend).
+(window.MagpieWidget && window.MagpieWidget.ready ? window.MagpieWidget.ready : Promise.resolve())
+  .then(() => {
+    loadAccounts();
 
-// Ouvrir l'accordion si pas de config, apres initialisation du DSFR
-const hasConfig = document.body.dataset.hasConfig === 'true';
-if (!hasConfig) {
-  // Script charge en defer : le DOM est deja pret, on attend juste
-  // que le DSFR ait fini d'attacher ses listeners
-  setTimeout(() => {
-    const btn = document.querySelector('#config-accordion .fr-accordion__btn');
-    if (btn && btn.getAttribute('aria-expanded') === 'false') {
-      btn.click();
+    // Ouvrir l'accordion si pas de config, apres initialisation du DSFR
+    const hasConfig = document.body.dataset.hasConfig === 'true';
+    if (!hasConfig) {
+      // Script charge en defer : le DOM est deja pret, on attend juste
+      // que le DSFR ait fini d'attacher ses listeners
+      setTimeout(() => {
+        const btn = document.querySelector('#config-accordion .fr-accordion__btn');
+        if (btn && btn.getAttribute('aria-expanded') === 'false') {
+          btn.click();
+        }
+      }, 100);
     }
-  }, 100);
-}
+  });

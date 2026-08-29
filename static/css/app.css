@@ -68,116 +68,7 @@
   flex-shrink: 0;
 }
 
-/* ── En-tête connectée (menu utilisateur) ────────────────────────────── */
-
-.gm-usermenu {
-  position: relative;
-}
-
-.gm-usermenu__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 260px;
-  min-width: 0;
-}
-
-.gm-usermenu__btn-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.gm-usermenu__chevron {
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
-
-.gm-usermenu__btn[aria-expanded="true"] .gm-usermenu__chevron {
-  transform: rotate(180deg);
-}
-
-.gm-usermenu__panel {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  min-width: 280px;
-  background: var(--background-default-grey);
-  border: 1px solid var(--border-default-grey);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  padding: 1rem;
-  z-index: 100;
-}
-
-.gm-usermenu__panel[hidden] {
-  display: none;
-}
-
-.gm-usermenu__identity {
-  padding-bottom: 0.875rem;
-  margin-bottom: 0.875rem;
-  border-bottom: 1px solid var(--border-default-grey);
-}
-
-.gm-usermenu__label {
-  font-size: 0.6875rem;
-  color: var(--text-mention-grey);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin: 0 0 0.25rem 0;
-}
-
-.gm-usermenu__email {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-title-grey);
-  margin: 0;
-  word-break: break-word;
-}
-
-.gm-usermenu__links {
-  list-style: none;
-  margin: 0 0 0.875rem 0;
-  padding: 0;
-}
-
-.gm-usermenu__link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
-  font-size: 0.875rem;
-  color: var(--text-action-high-blue-france);
-  text-decoration: none;
-}
-
-.gm-usermenu__link:hover {
-  text-decoration: underline;
-}
-
-.gm-usermenu__logout {
-  margin: 0;
-}
-
-@media (max-width: 768px) {
-  .gm-usermenu__btn {
-    max-width: 200px;
-  }
-
-  .gm-usermenu__panel {
-    right: 0;
-    left: auto;
-    min-width: 260px;
-  }
-}
-
-@media (max-width: 768px) {
-  .grist-header {
-    padding: 1rem 0;
-  }
+/* ── Header mobile ───────────────────────────────────────────────────── */
 
   .grist-header__inner {
     flex-direction: column;
@@ -212,8 +103,7 @@
     font-size: 0.75rem;
   }
 
-  /* Le conteneur des actions (Administration / Deconnexion) repasse
-     sous la marque au lieu de deborder a droite */
+  /* Le conteneur des actions repasse sous la marque au lieu de deborder */
   .grist-header__actions {
     margin-left: 0;
     width: 100%;
