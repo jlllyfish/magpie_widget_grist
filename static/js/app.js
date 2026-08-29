@@ -514,16 +514,16 @@ function esc(s) {
 
     loadAccounts();
 
-    // Ouvrir l'accordion si pas de config, apres initialisation du DSFR
-    const hasConfig = document.body.dataset.hasConfig === 'true';
-    if (!hasConfig) {
-      // Script charge en defer : le DOM est deja pret, on attend juste
-      // que le DSFR ait fini d'attacher ses listeners
-      setTimeout(() => {
-        const btn = document.querySelector('#config-accordion .fr-accordion__btn');
-        if (btn && btn.getAttribute('aria-expanded') === 'false') {
-          btn.click();
-        }
-      }, 100);
-    }
+    // En mode widget-only, la cle API n'est jamais persistee de facon
+    // durable (session ephemere, pas d'authentification Magpie) -- on
+    // ouvre donc systematiquement l'accordion a chaque chargement, pour
+    // que l'utilisateur la ressaisisse.
+    // Script charge en defer : le DOM est deja pret, on attend juste
+    // que le DSFR ait fini d'attacher ses listeners
+    setTimeout(() => {
+      const btn = document.querySelector('#config-accordion .fr-accordion__btn');
+      if (btn && btn.getAttribute('aria-expanded') === 'false') {
+        btn.click();
+      }
+    }, 100);
   });
