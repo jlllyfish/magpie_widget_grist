@@ -505,6 +505,13 @@ function esc(s) {
 // des le premier rendu (docAccessSectionHTML en depend).
 (window.MagpieWidget && window.MagpieWidget.ready ? window.MagpieWidget.ready : Promise.resolve())
   .then(() => {
+    // Si on est bien dans Grist mais que l'acces n'a pas ete accorde
+    // (docId absent malgre un contexte Grist confirme), on affiche le
+    // bandeau d'instructions plutot que de laisser l'utilisateur deviner.
+    if (window.MagpieWidget && window.MagpieWidget.inGristContext && !window.MagpieWidget.docId) {
+      document.getElementById('widget-access-warning').style.display = 'block';
+    }
+
     loadAccounts();
 
     // Ouvrir l'accordion si pas de config, apres initialisation du DSFR
