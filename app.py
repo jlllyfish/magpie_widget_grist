@@ -112,7 +112,9 @@ def verify_owner_on_doc(cfg, doc_id):
     Retourne (True, None) si autorise, (False, message_erreur) sinon.
     """
     try:
-        # 1. Identifie l'utilisateur proprietaire de la cle API
+        # 1. Identifie l'utilisateur proprietaire de la cle API.
+        # /api/profile/user ne renvoie PAS d'email (seulement id/name/picture),
+        # on identifie donc l'utilisateur par son id, pas par email.
         r_profile = requests.get(
             f"{cfg['url']}/api/profile/user",
             headers=api_headers(cfg["key"]),
@@ -120,11 +122,13 @@ def verify_owner_on_doc(cfg, doc_id):
         )
         r_profile.raise_for_status()
         profile = r_profile.json()
-        user_email = profile.get("email")
-        if not user_email:
+        user_id = profile.get("id")
+        if user_id is None:
             return False, "Impossible d'identifier l'utilisateur associé à cette clé API"
 
-        # 2. Verifie le role de cet utilisateur sur le document courant
+        # 2. Verifie le role de cet utilisateur sur le document courant,
+        # en comparant par id (fiable) plutot que par email (absent de
+        # la reponse profile/user).
         r_access = requests.get(
             f"{cfg['url']}/api/docs/{doc_id}/access",
             headers=api_headers(cfg["key"]),
@@ -134,7 +138,7 @@ def verify_owner_on_doc(cfg, doc_id):
         access_data = r_access.json()
 
         user_role = next(
-            (u.get("access") for u in access_data.get("users", []) if u.get("email") == user_email),
+            (u.get("access") for u in access_data.get("users", []) if u.get("id") == user_id),
             None,
         )
 
