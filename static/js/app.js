@@ -263,10 +263,14 @@ function initDocAccessSection(prefix, loginOrGetter) {
       if (data.error) throw new Error(data.error);
 
       successEl.style.display = 'block';
-      // Rafraichit la liste des documents lies affichee sur la carte,
-      // uniquement pertinent pour les cartes de comptes existants
+      // Rafraichit la liste des documents lies affichee sur la carte
       if (prefix.startsWith('acc-')) {
         loadDocLinksForCard(prefix, login);
+      } else {
+        // Depuis la section creation : le compte vient d'apparaitre dans
+        // la liste principale, on recharge tout pour que sa carte
+        // affiche directement le document lie sans attendre un F5 manuel.
+        loadAccounts();
       }
     } catch (e) {
       errorEl.querySelector('p').textContent = 'Erreur : ' + e.message;
