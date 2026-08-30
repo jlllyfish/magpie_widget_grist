@@ -98,6 +98,59 @@ def redact(key):
     return key[:4] + "****"
 
 
+def verify_owner_on_doc(cfg, doc_id):
+    """
+    Verifie que la cle API configuree appartient a un utilisateur ayant le
+    role Owner sur ce document precis.
+
+    C'est le garde-fou anti-abus du widget : sans ce controle, quiconque
+    saisit une cle API valide (meme celle d'un simple lecteur d'un AUTRE
+    document, ou une cle recuperee/interceptee) pourrait s'accorder ou
+    accorder a un tiers un role Proprietaire sur le document actuellement
+    ouvert dans le widget -- independamment de ses droits reels sur celui-ci.
+
+    Retourne (True, None) si autorise, (False, message_erreur) sinon.
+    """
+    try:
+        # 1. Identifie l'utilisateur proprietaire de la cle API
+        r_profile = requests.get(
+            f"{cfg['url']}/api/profile/user",
+            headers=api_headers(cfg["key"]),
+            timeout=10,
+        )
+        r_profile.raise_for_status()
+        profile = r_profile.json()
+        user_email = profile.get("email")
+        if not user_email:
+            return False, "Impossible d'identifier l'utilisateur associé à cette clé API"
+
+        # 2. Verifie le role de cet utilisateur sur le document courant
+        r_access = requests.get(
+            f"{cfg['url']}/api/docs/{doc_id}/access",
+            headers=api_headers(cfg["key"]),
+            timeout=10,
+        )
+        r_access.raise_for_status()
+        access_data = r_access.json()
+
+        user_role = next(
+            (u.get("access") for u in access_data.get("users", []) if u.get("email") == user_email),
+            None,
+        )
+
+        if user_role != "owners":
+            return False, (
+                f"Action non autorisée : vous devez être Propriétaire de ce document "
+                f"pour y ajouter un compte de service (rôle actuel : {user_role or 'aucun accès'})."
+            )
+
+        return True, None
+
+    except requests.exceptions.RequestException as e:
+        app.logger.error("Erreur verification autorisation Owner sur doc %s : %s", doc_id, e)
+        return False, "Impossible de vérifier vos droits sur ce document"
+
+
 # ─── Routes applicatives ────────────────────────────────────────────────────────
 # Aucune authentification Magpie : la cle API Grist saisie par l'utilisateur
 # EST l'autorisation. Elle n'est jamais stockee en base, uniquement en
@@ -166,6 +219,17 @@ def grant_doc_access(doc_id):
         return jsonify({"error": "Login manquant"}), 400
     if role not in ("editors", "owners"):
         return jsonify({"error": "Rôle invalide"}), 400
+
+    # ── Verification d'autorisation ──────────────────────────────────────
+    # On s'assure que la personne qui a saisi cette cle a bien le role
+    # Owner sur CE document precis avant de lui permettre d'y ajouter un
+    # compte de service. Sans ce controle, n'importe quelle cle API valide
+    # (meme celle d'un simple lecteur d'un AUTRE document) pourrait etre
+    # utilisee pour s'accorder des droits Proprietaire sur le document
+    # actuellement ouvert dans le widget.
+    is_authorized, auth_error = verify_owner_on_doc(cfg, doc_id)
+    if not is_authorized:
+        return jsonify({"error": auth_error}), 403
 
     payload = {"delta": {"users": {login: role}}}
 
