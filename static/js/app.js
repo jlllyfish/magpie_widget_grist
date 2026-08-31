@@ -272,6 +272,19 @@ function initDocAccessSection(prefix, loginOrGetter) {
         // affiche directement le document lie sans attendre un F5 manuel.
         loadAccounts();
       }
+
+      // Decoche la case et referme le panneau apres un court delai, pour
+      // que l'utilisateur voie le message de succes avant la fermeture,
+      // et pour eviter qu'il puisse reattribuer par erreur en reclickant.
+      // On revalide chk/panel car loadAccounts() peut avoir recree le DOM
+      // entre-temps (cas de la section creation), rendant les references
+      // capturees plus haut potentiellement obsoletes.
+      setTimeout(() => {
+        const freshChk = document.getElementById(`chk-add-to-doc-${prefix}`);
+        const freshPanel = document.getElementById(`doc-access-panel-${prefix}`);
+        if (freshChk) freshChk.checked = false;
+        if (freshPanel) freshPanel.style.display = 'none';
+      }, 1500);
     } catch (e) {
       errorEl.querySelector('p').textContent = 'Erreur : ' + e.message;
       errorEl.style.display = 'block';
@@ -286,7 +299,7 @@ function docAccessSectionHTML(prefix) {
     <div class="fr-mt-3w" style="border-top:1px solid var(--border-default-grey);padding-top:1rem;">
       <div class="fr-checkbox-group">
         <input type="checkbox" id="chk-add-to-doc-${prefix}" />
-        <label class="fr-label" for="chk-add-to-doc-${prefix}">
+        <label class="fr-label" for="chk-add-to-doc-${prefix}" id="label-add-to-doc-${prefix}">
           Ajouter ce compte à ce document Grist
         </label>
       </div>
@@ -407,6 +420,14 @@ async function loadDocLinksForCard(prefix, login) {
     const links = await r.json();
     if (links.error) throw new Error(links.error);
 
+    // Le compte est-il deja lie au document dans lequel le widget est
+    // actuellement ouvert ? Dans cette version widget-only, un compte
+    // n'a de sens que sur ce document precis -- pas d'interet a proposer
+    // un nouvel ajout une fois que c'est deja fait.
+    const currentDocId = window.MagpieWidget && window.MagpieWidget.docId;
+    const alreadyLinkedHere = currentDocId && links.some(l => l.docId === currentDocId);
+    updateDocCheckboxLabel(prefix, alreadyLinkedHere);
+
     if (!links.length) {
       zone.innerHTML = '';
       return;
@@ -431,6 +452,14 @@ async function loadDocLinksForCard(prefix, login) {
   } catch (e) {
     zone.innerHTML = `<div class="account-card__doc-links-error">Impossible de charger les documents liés.</div>`;
   }
+}
+
+function updateDocCheckboxLabel(prefix, alreadyLinked) {
+  const label = document.getElementById(`label-add-to-doc-${prefix}`);
+  if (!label) return;
+  label.textContent = alreadyLinked
+    ? 'Modifier le rôle sur ce document'
+    : 'Ajouter ce compte à ce document Grist';
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
