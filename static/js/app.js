@@ -309,8 +309,8 @@ function docAccessSectionHTML(prefix) {
           <div class="fr-select-group">
             <label class="fr-label" for="sel-role-${prefix}">Rôle</label>
             <select class="fr-select" id="sel-role-${prefix}">
-              <option value="editors" selected>Éditeur</option>
-              <option value="owners">Propriétaire</option>
+              <option value="owners" selected>Propriétaire</option>
+              <option value="editors">Éditeur</option>
             </select>
           </div>
         </div>
@@ -366,7 +366,10 @@ function renderAccounts(accounts) {
   const list = document.getElementById('accounts-list');
   list.innerHTML = '';
 
-  accounts.forEach(acc => {
+  // Du plus recent (id le plus eleve) au plus ancien
+  const sorted = [...accounts].sort((a, b) => b.id - a.id);
+
+  sorted.forEach(acc => {
     const expired  = acc.expiresAt && new Date(acc.expiresAt) < new Date();
     const validKey = acc.hasValidKey;
     const prefix = `acc-${acc.id}`;
