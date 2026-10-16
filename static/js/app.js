@@ -431,7 +431,8 @@ function renderAccounts(accounts) {
         <div class="account-card__actions">
           <button class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-delete-line"
                   style="color: var(--text-default-error);"
-                  onclick="confirmDelete(${acc.id}, '${esc(acc.label)}')">Supprimer</button>
+                  data-action="delete-account" data-account-id="${acc.id}"
+                  data-account-label="${esc(acc.label)}">Supprimer</button>
         </div>
       </div>
       ${docAccessSectionHTML(prefix)}
@@ -513,6 +514,18 @@ function confirmDelete(id, label) {
     'Supprimer'
   );
 }
+
+// Delegation d'evenements : aucun JavaScript inline dans le HTML genere.
+// Un nom de compte injecte dans un onclick="..." etait executable, car le
+// navigateur decode les entites HTML (&#39;) avant d'interpreter le JS.
+// Les data-attributes, eux, restent de simples chaines lues par dataset.
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="delete-account"]');
+  if (!btn) return;
+  const id = parseInt(btn.dataset.accountId, 10);
+  if (!Number.isInteger(id)) return;
+  confirmDelete(id, btn.dataset.accountLabel || '');
+});
 
 // ─── Modal DSFR ───────────────────────────────────────────────────────────────
 
