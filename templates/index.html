@@ -15,7 +15,7 @@
 
   <meta name="csrf-token" content="{{ csrf_token() }}" />
 </head>
-<body data-has-config="{{ 'true' if has_config else 'false' }}">
+<body>
 
   <!-- ── En-tête ───────────────────────────────────────────────────────── -->
   <header class="grist-header">
@@ -79,7 +79,7 @@
                 Clé API maître *
               </label>
               <input class="fr-input" type="password" id="cfg-key"
-                     placeholder="Clé API Grist"
+                     placeholder="Clé API Grist" autocomplete="off"
                      aria-describedby="cfg-key-messages" />
               <div class="fr-messages-group" id="cfg-key-messages" aria-live="polite"></div>
             </div>
@@ -91,7 +91,7 @@
           </div>
 
           <div id="config-success" class="fr-alert fr-alert--success fr-alert--sm fr-mt-2w" style="display:none;">
-            <p>Connexion vérifiée et enregistrée avec succès.</p>
+            <p>Connexion vérifiée. La clé est gardée uniquement dans cette page : elle sera redemandée à la prochaine ouverture.</p>
           </div>
         </div>
       </div>

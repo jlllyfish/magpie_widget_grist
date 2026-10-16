@@ -39,8 +39,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 # ─── Cookies de session durcis ─────────────────────────────────────────────────
-# Meme sans compte utilisateur, la session sert a stocker la config Grist
-# (URL + cle API) le temps de l'usage du widget.
+# La session ne sert plus qu'au jeton CSRF : la cle API n'y est jamais stockee.
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 # SameSite=None + Secure : requis pour que le cookie de session fonctionne
@@ -79,10 +78,31 @@ def is_valid_grist_url(url):
 
 
 def get_config():
-    return {
-        "url": session.get("grist_url", DEFAULT_GRIST_URL).rstrip("/"),
-        "key": session.get("api_key", ""),
-    }
+    """
+    Lit l'URL et la cle API Grist dans les en-tetes de la requete en cours.
+
+    La cle n'est JAMAIS stockee cote serveur (ni session, ni base, ni cookie) :
+    elle vit uniquement dans la memoire de la page du widget et accompagne
+    chaque appel. Un cookie de session est lie au navigateur, pas a
+    l'utilisateur Grist : le stocker la exposait les comptes de service du
+    proprietaire a toute personne ouvrant le widget dans le meme navigateur.
+    """
+    url = (request.headers.get("X-Grist-Url") or DEFAULT_GRIST_URL).strip().rstrip("/")
+    key = (request.headers.get("X-Grist-Api-Key") or "").strip()
+    # L'URL vient du client a chaque requete : on la revalide a chaque fois (SSRF)
+    if url and not is_valid_grist_url(url):
+        url = ""
+    return {"url": url, "key": key}
+
+
+def config_error():
+    """Renvoie une reponse 401 si la config est incomplete, sinon None."""
+    cfg = get_config()
+    if not cfg["key"]:
+        return cfg, (jsonify({"error": "Clé API non configurée"}), 401)
+    if not cfg["url"]:
+        return cfg, (jsonify({"error": "URL de l'instance Grist invalide ou non autorisée"}), 400)
+    return cfg, None
 
 
 def api_headers(key):
@@ -90,12 +110,6 @@ def api_headers(key):
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
     }
-
-
-def redact(key):
-    if not key:
-        return "(vide)"
-    return key[:4] + "****"
 
 
 def verify_owner_on_doc(cfg, doc_id):
@@ -157,43 +171,22 @@ def verify_owner_on_doc(cfg, doc_id):
 
 # ─── Routes applicatives ────────────────────────────────────────────────────────
 # Aucune authentification Magpie : la cle API Grist saisie par l'utilisateur
-# EST l'autorisation. Elle n'est jamais stockee en base, uniquement en
-# session serveur, jamais renvoyee au client.
+# EST l'autorisation. Elle n'est stockee nulle part cote serveur : le client
+# l'envoie dans l'en-tete X-Grist-Api-Key a chaque requete.
 
 @app.route("/")
 def index():
-    cfg = get_config()
-    return render_template(
-        "index.html",
-        grist_url=cfg["url"],
-        has_config=bool(cfg["url"] and cfg["key"]),
-    )
-
-
-@app.route("/api/config", methods=["POST"])
-@limiter.limit("10 per minute")
-def set_config():
-    data = request.get_json(silent=True) or {}
-    url = data.get("url", "").strip()
-    key = data.get("key", "").strip()
-
-    if url:
-        if not is_valid_grist_url(url):
-            return jsonify({"error": "URL invalide ou non autorisee"}), 400
-        session["grist_url"] = url
-
-    if key:
-        session["api_key"] = key
-        app.logger.info("Cle API mise a jour en session : %s", redact(key))
-
-    return jsonify({"ok": True})
+    # Purge les cles/URL stockees en session par les anciennes versions
+    session.pop("api_key", None)
+    session.pop("grist_url", None)
+    return render_template("index.html", grist_url=DEFAULT_GRIST_URL.rstrip("/"))
 
 
 @app.route("/api/service-accounts", methods=["GET"])
 def list_accounts():
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
+    cfg, err = config_error()
+    if err:
+        return err
     try:
         r = requests.get(
             f"{cfg['url']}/api/service-accounts",
@@ -211,9 +204,9 @@ def list_accounts():
 @limiter.limit("30 per hour")
 def grant_doc_access(doc_id):
     """Donne acces a un document Grist pour un login (typiquement un compte de service)."""
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
+    cfg, err = config_error()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     login = (body.get("login") or "").strip()
@@ -271,9 +264,9 @@ def get_service_account_doc_links(login):
     Magpie, avec leur nom et le role actuel du compte -- toujours recuperes
     en direct depuis Grist pour ne jamais etre desynchronises.
     """
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
+    cfg, err = config_error()
+    if err:
+        return err
 
     links = ServiceAccountDocLink.query.filter_by(service_account_login=login).all()
     results = []
@@ -323,9 +316,9 @@ def get_service_account_doc_links(login):
 @app.route("/api/service-accounts", methods=["POST"])
 @limiter.limit("20 per hour")
 def create_account():
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
+    cfg, err = config_error()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     label = (body.get("label") or "").strip()
@@ -366,9 +359,9 @@ def create_account():
 @app.route("/api/service-accounts/<int:account_id>", methods=["DELETE"])
 @limiter.limit("30 per hour")
 def delete_account(account_id):
-    cfg = get_config()
-    if not cfg["key"]:
-        return jsonify({"error": "Clé API non configurée"}), 401
+    cfg, err = config_error()
+    if err:
+        return err
     try:
         r = requests.delete(
             f"{cfg['url']}/api/service-accounts/{account_id}",
@@ -398,6 +391,10 @@ def set_security_headers(response):
     response.headers["Content-Security-Policy"] = f"frame-ancestors {allowed_frame_ancestors}"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
+    # Aucune reponse API (liste de comptes, cles generees) ne doit etre
+    # mise en cache par le navigateur ou un proxy intermediaire
+    if request.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
     return response
 
 
