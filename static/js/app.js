@@ -84,7 +84,11 @@ document.getElementById('btn-save-config').addEventListener('click', async () =>
 
     if (!r.ok || data.error) {
       GRIST_CONFIG.key = '';
-      setConfigFieldError('group-cfg-key', 'cfg-key-messages', 'cfg-key', 'Clé API invalide ou accès refusé');
+      if (r.status === 400) {
+        setConfigFieldError('group-cfg-url', 'cfg-url-messages', 'cfg-url', data.error || 'Instance Grist non autorisée');
+      } else {
+        setConfigFieldError('group-cfg-key', 'cfg-key-messages', 'cfg-key', 'Clé API invalide ou accès refusé');
+      }
       return;
     }
 
