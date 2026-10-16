@@ -159,6 +159,15 @@ def grist_error(exc, context):
     return jsonify({"error": "Erreur de communication avec Grist"}), 502
 
 
+# Identifiant de document Grist : alphanumerique uniquement. Insere tel quel
+# dans l'URL de l'API Grist, il ne doit contenir ni "/", ni "..", ni "?".
+DOC_ID_PATTERN = re.compile(r"^[A-Za-z0-9]{6,64}$")
+
+
+def valid_doc_id(doc_id):
+    return bool(doc_id and DOC_ID_PATTERN.match(doc_id))
+
+
 def list_caller_service_accounts(cfg):
     """Comptes de service appartenant au detenteur de la cle API."""
     return grist_call("GET", cfg, "/api/service-accounts").json()
@@ -254,10 +263,22 @@ def grant_doc_access(doc_id):
     login = (body.get("login") or "").strip()
     role = (body.get("role") or "editors").strip()
 
+    if not valid_doc_id(doc_id):
+        return jsonify({"error": "Identifiant de document invalide"}), 400
     if not login:
         return jsonify({"error": "Login manquant"}), 400
     if role not in ("editors", "owners"):
         return jsonify({"error": "Rôle invalide"}), 400
+
+    # Seuls les comptes de service du detenteur de la cle peuvent etre
+    # ajoutes : Magpie n'est pas un outil de partage de document generique,
+    # et chaque appel enregistre le login en base.
+    try:
+        own_logins = {a.get("login") for a in list_caller_service_accounts(cfg)}
+    except requests.exceptions.RequestException as e:
+        return grist_error(e, "Erreur verification proprietaire compte de service")
+    if login not in own_logins:
+        return jsonify({"error": "Ce compte de service ne vous appartient pas"}), 403
 
     # ── Verification d'autorisation ──────────────────────────────────────
     # On s'assure que la personne qui a saisi cette cle a bien le role
