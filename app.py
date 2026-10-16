@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+from urllib.parse import urlsplit
 
 import requests
 from flask import Flask, render_template, request, jsonify, session
@@ -49,7 +50,20 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_SECURE"] = True  # obligatoire avec SameSite=None
 
-DEFAULT_GRIST_URL = os.environ.get("GRIST_URL", "")
+DEFAULT_GRIST_URL = os.environ.get("GRIST_URL", "https://grist.numerique.gouv.fr").strip().rstrip("/")
+
+# Liste blanche des instances Grist joignables (noms d'hote exacts, separes
+# par des virgules). Toute autre URL est refusee : Magpie n'a pas
+# d'authentification propre, une URL libre en ferait un relais SSRF vers le
+# reseau interne de l'hebergeur.
+ALLOWED_GRIST_HOSTS = {
+    h.strip().lower()
+    for h in os.environ.get(
+        "ALLOWED_GRIST_HOSTS",
+        urlsplit(DEFAULT_GRIST_URL).hostname or "grist.numerique.gouv.fr",
+    ).split(",")
+    if h.strip()
+}
 
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.INFO)
@@ -66,15 +80,23 @@ limiter = Limiter(
 
 # ─── Validation d'entrees (SSRF) ────────────────────────────────────────────────
 
-URL_PATTERN = re.compile(r"^https://[a-zA-Z0-9.\-]+(\.[a-zA-Z]{2,})+(/.*)?$")
-
-
-def is_valid_grist_url(url):
-    if not url or not URL_PATTERN.match(url):
-        return False
-    lowered = url.lower()
-    forbidden = ["localhost", "127.0.0.1", "0.0.0.0", "169.254.", "10.", "192.168.", "172.16."]
-    return not any(f in lowered for f in forbidden)
+def normalize_grist_url(url):
+    """
+    Renvoie "https://<hote>" si l'URL vise une instance de la liste blanche,
+    sinon None. Pas de port, d'identifiants ni de chemin : seul l'hote compte.
+    """
+    try:
+        parts = urlsplit((url or "").strip())
+        host = (parts.hostname or "").lower()
+        if parts.scheme != "https" or parts.port or parts.username or parts.password:
+            return None
+        if parts.path not in ("", "/") or parts.query or parts.fragment:
+            return None
+    except ValueError:
+        return None
+    if host not in ALLOWED_GRIST_HOSTS:
+        return None
+    return f"https://{host}"
 
 
 def get_config():
@@ -87,11 +109,10 @@ def get_config():
     l'utilisateur Grist : le stocker la exposait les comptes de service du
     proprietaire a toute personne ouvrant le widget dans le meme navigateur.
     """
-    url = (request.headers.get("X-Grist-Url") or DEFAULT_GRIST_URL).strip().rstrip("/")
+    raw_url = request.headers.get("X-Grist-Url") or DEFAULT_GRIST_URL
     key = (request.headers.get("X-Grist-Api-Key") or "").strip()
     # L'URL vient du client a chaque requete : on la revalide a chaque fois (SSRF)
-    if url and not is_valid_grist_url(url):
-        url = ""
+    url = normalize_grist_url(raw_url) or ""
     return {"url": url, "key": key}
 
 
@@ -101,8 +122,46 @@ def config_error():
     if not cfg["key"]:
         return cfg, (jsonify({"error": "Clé API non configurée"}), 401)
     if not cfg["url"]:
-        return cfg, (jsonify({"error": "URL de l'instance Grist invalide ou non autorisée"}), 400)
+        return cfg, (jsonify({"error": "Instance Grist non autorisée sur ce serveur Magpie"}), 400)
     return cfg, None
+
+
+def grist_call(method, cfg, path, **kwargs):
+    """
+    Appel a l'API Grist de l'instance configuree. Les redirections ne sont
+    jamais suivies (elles pourraient mener hors de la liste blanche).
+    """
+    r = requests.request(
+        method,
+        f"{cfg['url']}{path}",
+        headers=api_headers(cfg["key"]),
+        timeout=10,
+        allow_redirects=False,
+        **kwargs,
+    )
+    if 300 <= r.status_code < 400:
+        raise requests.exceptions.HTTPError(f"Redirection refusee ({r.status_code})", response=r)
+    r.raise_for_status()
+    return r
+
+
+def grist_error(exc, context):
+    """
+    Journalise le detail de l'erreur et renvoie au client un message generique :
+    le detail (URL, hote, message reseau) servirait d'oracle a un attaquant.
+    """
+    app.logger.error("%s : %s", context, exc)
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status in (401, 403):
+        return jsonify({"error": "Accès refusé par Grist : clé invalide ou droits insuffisants"}), 403
+    if status == 404:
+        return jsonify({"error": "Ressource introuvable sur Grist"}), 404
+    return jsonify({"error": "Erreur de communication avec Grist"}), 502
+
+
+def list_caller_service_accounts(cfg):
+    """Comptes de service appartenant au detenteur de la cle API."""
+    return grist_call("GET", cfg, "/api/service-accounts").json()
 
 
 def api_headers(key):
@@ -129,12 +188,7 @@ def verify_owner_on_doc(cfg, doc_id):
         # 1. Identifie l'utilisateur proprietaire de la cle API.
         # /api/profile/user ne renvoie PAS d'email (seulement id/name/picture),
         # on identifie donc l'utilisateur par son id, pas par email.
-        r_profile = requests.get(
-            f"{cfg['url']}/api/profile/user",
-            headers=api_headers(cfg["key"]),
-            timeout=10,
-        )
-        r_profile.raise_for_status()
+        r_profile = grist_call("GET", cfg, "/api/profile/user")
         profile = r_profile.json()
         user_id = profile.get("id")
         if user_id is None:
@@ -143,12 +197,7 @@ def verify_owner_on_doc(cfg, doc_id):
         # 2. Verifie le role de cet utilisateur sur le document courant,
         # en comparant par id (fiable) plutot que par email (absent de
         # la reponse profile/user).
-        r_access = requests.get(
-            f"{cfg['url']}/api/docs/{doc_id}/access",
-            headers=api_headers(cfg["key"]),
-            timeout=10,
-        )
-        r_access.raise_for_status()
+        r_access = grist_call("GET", cfg, f"/api/docs/{doc_id}/access")
         access_data = r_access.json()
 
         user_role = next(
@@ -188,16 +237,9 @@ def list_accounts():
     if err:
         return err
     try:
-        r = requests.get(
-            f"{cfg['url']}/api/service-accounts",
-            headers=api_headers(cfg["key"]),
-            timeout=10,
-        )
-        r.raise_for_status()
-        return jsonify(r.json())
+        return jsonify(list_caller_service_accounts(cfg))
     except requests.exceptions.RequestException as e:
-        app.logger.error("Erreur liste comptes : %s", e)
-        return jsonify({"error": str(e)}), 500
+        return grist_error(e, "Erreur liste comptes")
 
 
 @app.route("/api/grist/docs/<doc_id>/access", methods=["PATCH"])
@@ -231,13 +273,7 @@ def grant_doc_access(doc_id):
     payload = {"delta": {"users": {login: role}}}
 
     try:
-        r = requests.patch(
-            f"{cfg['url']}/api/docs/{doc_id}/access",
-            headers=api_headers(cfg["key"]),
-            json=payload,
-            timeout=10,
-        )
-        r.raise_for_status()
+        grist_call("PATCH", cfg, f"/api/docs/{doc_id}/access", json=payload)
         app.logger.info("Acces document accorde : login=%s doc=%s role=%s", login, doc_id, role)
 
         # Enregistre le lien (login <-> doc) s'il n'existe pas deja,
@@ -253,8 +289,7 @@ def grant_doc_access(doc_id):
 
         return jsonify({"ok": True})
     except requests.exceptions.RequestException as e:
-        app.logger.error("Erreur attribution acces document : %s", e)
-        return jsonify({"error": str(e)}), 500
+        return grist_error(e, "Erreur attribution acces document")
 
 
 @app.route("/api/service-accounts/<login>/doc-links", methods=["GET"])
@@ -268,27 +303,27 @@ def get_service_account_doc_links(login):
     if err:
         return err
 
+    # Le login doit appartenir au detenteur de la cle : sans ce controle,
+    # n'importe qui (meme avec une cle bidon) obtenait les identifiants des
+    # documents rattaches a un compte de service tiers.
+    try:
+        own_logins = {a.get("login") for a in list_caller_service_accounts(cfg)}
+    except requests.exceptions.RequestException as e:
+        return grist_error(e, "Erreur verification proprietaire compte de service")
+    if login not in own_logins:
+        return jsonify({"error": "Ce compte de service ne vous appartient pas"}), 403
+
     links = ServiceAccountDocLink.query.filter_by(service_account_login=login).all()
     results = []
 
     for link in links:
         try:
             # Nom du document
-            r_doc = requests.get(
-                f"{cfg['url']}/api/docs/{link.doc_id}",
-                headers=api_headers(cfg["key"]),
-                timeout=10,
-            )
-            r_doc.raise_for_status()
+            r_doc = grist_call("GET", cfg, f"/api/docs/{link.doc_id}")
             doc_data = r_doc.json()
 
             # Role actuel du compte sur ce document
-            r_access = requests.get(
-                f"{cfg['url']}/api/docs/{link.doc_id}/access",
-                headers=api_headers(cfg["key"]),
-                timeout=10,
-            )
-            r_access.raise_for_status()
+            r_access = grist_call("GET", cfg, f"/api/docs/{link.doc_id}/access")
             access_data = r_access.json()
             role = next(
                 (u.get("access") for u in access_data.get("users", []) if u.get("email") == login),
@@ -341,19 +376,11 @@ def create_account():
     payload["expiresAt"] = expires_at
 
     try:
-        r = requests.post(
-            f"{cfg['url']}/api/service-accounts",
-            headers=api_headers(cfg["key"]),
-            json=payload,
-            timeout=10,
-        )
-        r.raise_for_status()
-        data = r.json()
+        data = grist_call("POST", cfg, "/api/service-accounts", json=payload).json()
         app.logger.info("Compte cree : login=%s", data.get("login", "?"))
         return jsonify(data)
     except requests.exceptions.RequestException as e:
-        app.logger.error("Erreur creation compte : %s", e)
-        return jsonify({"error": str(e)}), 500
+        return grist_error(e, "Erreur creation compte")
 
 
 @app.route("/api/service-accounts/<int:account_id>", methods=["DELETE"])
@@ -363,17 +390,11 @@ def delete_account(account_id):
     if err:
         return err
     try:
-        r = requests.delete(
-            f"{cfg['url']}/api/service-accounts/{account_id}",
-            headers=api_headers(cfg["key"]),
-            timeout=10,
-        )
-        r.raise_for_status()
+        grist_call("DELETE", cfg, f"/api/service-accounts/{account_id}")
         app.logger.info("Compte supprime : #%d", account_id)
         return jsonify({"ok": True})
     except requests.exceptions.RequestException as e:
-        app.logger.error("Erreur suppression #%d : %s", account_id, e)
-        return jsonify({"error": str(e)}), 500
+        return grist_error(e, f"Erreur suppression #{account_id}")
 
 
 # ─── Headers de securite ─────────────────────────────────────────────────────
