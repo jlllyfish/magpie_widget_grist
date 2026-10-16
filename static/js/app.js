@@ -8,6 +8,27 @@ function csrfHeaders(extra = {}) {
   return { 'X-CSRFToken': CSRF_TOKEN, ...extra };
 }
 
+// ─── Config Grist en memoire uniquement ───────────────────────────────────────
+// La cle API ne quitte jamais la memoire de cette page : pas de cookie, pas de
+// session serveur, pas de localStorage, pas d'option de widget Grist (qui
+// serait partagee avec tous les utilisateurs du document). Recharger ou fermer
+// le widget l'efface. Elle accompagne chaque appel dans un en-tete.
+
+const GRIST_CONFIG = { url: '', key: '' };
+
+function hasGristConfig() {
+  return Boolean(GRIST_CONFIG.url && GRIST_CONFIG.key);
+}
+
+function apiFetch(path, options = {}) {
+  const headers = csrfHeaders({
+    'X-Grist-Url': GRIST_CONFIG.url,
+    'X-Grist-Api-Key': GRIST_CONFIG.key,
+    ...(options.headers || {}),
+  });
+  return fetch(path, { ...options, headers, credentials: 'same-origin', cache: 'no-store' });
+}
+
 // ─── Config accordion ─────────────────────────────────────────────────────────
 
 function setConfigFieldError(groupId, messagesId, inputId, message) {
@@ -53,22 +74,23 @@ document.getElementById('btn-save-config').addEventListener('click', async () =>
   btn.disabled = true;
   btn.setAttribute('aria-busy', 'true');
 
-  // Enregistre en session
-  await fetch('/api/config', {
-    method: 'POST',
-    headers: csrfHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ url, key }),
-  });
+  // Garde la config en memoire, puis la verifie par un appel reel
+  GRIST_CONFIG.url = url.replace(/\/+$/, '');
+  GRIST_CONFIG.key = key;
 
-  // Vérifie la clé en tentant un appel réel
   try {
-    const r    = await fetch('/api/service-accounts');
+    const r    = await apiFetch('/api/service-accounts');
     const data = await r.json();
 
-    if (r.status === 401 || data.error) {
+    if (!r.ok || data.error) {
+      GRIST_CONFIG.key = '';
       setConfigFieldError('group-cfg-key', 'cfg-key-messages', 'cfg-key', 'Clé API invalide ou accès refusé');
       return;
     }
+
+    // La cle est retenue en memoire : on vide le champ pour qu'elle ne
+    // reste pas lisible dans le DOM
+    document.getElementById('cfg-key').value = '';
 
     // Succes - affiche l'alerte, charge les comptes et referme l'accordion apres un court delai
     document.getElementById('config-success').style.display = 'block';
@@ -82,6 +104,7 @@ document.getElementById('btn-save-config').addEventListener('click', async () =>
     }, 1200);
 
   } catch (e) {
+    GRIST_CONFIG.key = '';
     setConfigFieldError('group-cfg-url', 'cfg-url-messages', 'cfg-url', 'Impossible de joindre l\'instance Grist');
   } finally {
     btn.disabled = false;
@@ -158,7 +181,7 @@ async function createAccount() {
   document.getElementById('key-reveal').classList.remove('is-visible');
 
   try {
-    const r    = await fetch('/api/service-accounts', {
+    const r    = await apiFetch('/api/service-accounts', {
       method: 'POST',
       headers: csrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
@@ -254,7 +277,7 @@ function initDocAccessSection(prefix, loginOrGetter) {
     btnGrant.disabled = true;
 
     try {
-      const r = await fetch(`/api/grist/docs/${docId}/access`, {
+      const r = await apiFetch(`/api/grist/docs/${docId}/access`, {
         method: 'PATCH',
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ login, role }),
@@ -338,13 +361,17 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
 });
 
 async function loadAccounts() {
-  setLoading('btn-refresh', true);
   document.getElementById('accounts-error').style.display  = 'none';
   document.getElementById('accounts-empty').style.display  = 'none';
   document.getElementById('accounts-list').innerHTML = '';
 
+  // Sans cle saisie dans CETTE page, on n'affiche rien
+  if (!hasGristConfig()) return;
+
+  setLoading('btn-refresh', true);
+
   try {
-    const r    = await fetch('/api/service-accounts');
+    const r    = await apiFetch('/api/service-accounts');
     const data = await r.json();
     if (data.error) throw new Error(data.error);
 
@@ -419,7 +446,7 @@ async function loadDocLinksForCard(prefix, login) {
   zone.innerHTML = `<div class="account-card__doc-links-loading">Chargement des documents liés…</div>`;
 
   try {
-    const r = await fetch(`/api/service-accounts/${encodeURIComponent(login)}/doc-links`);
+    const r = await apiFetch(`/api/service-accounts/${encodeURIComponent(login)}/doc-links`);
     const links = await r.json();
     if (links.error) throw new Error(links.error);
 
@@ -473,7 +500,7 @@ function confirmDelete(id, label) {
     `Supprimer définitivement le compte « ${label} » (#${id}) ? Cette action est irréversible.`,
     async () => {
       try {
-        const r = await fetch(`/api/service-accounts/${id}`, { method: 'DELETE', headers: csrfHeaders() });
+        const r = await apiFetch(`/api/service-accounts/${id}`, { method: 'DELETE' });
         const d = await r.json();
         if (d.error) throw new Error(d.error);
         loadAccounts();
