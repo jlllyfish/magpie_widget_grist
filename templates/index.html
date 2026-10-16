@@ -15,7 +15,7 @@
 
   <meta name="csrf-token" content="{{ csrf_token() }}" />
 </head>
-<body>
+<body data-widget-access="{{ grist_widget_access }}">
 
   <!-- ── En-tête ───────────────────────────────────────────────────────── -->
   <header class="grist-header">
@@ -246,9 +246,9 @@
   <script type="module" src="{{ url_for('static', filename='dsfr/dsfr.module.min.js') }}"></script>
   <script type="text/javascript" nomodule src="{{ url_for('static', filename='dsfr/dsfr.nomodule.min.js') }}"></script>
 
-  <!-- Grist Widget API (charge sans erreur meme hors contexte Grist -->
-  <!-- widget.js gere l'absence de l'objet 'grist' proprement) -->
-  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+  <!-- Grist Widget API, servie par l'instance Grist (voir GRIST_PLUGIN_API_URL).
+       widget.js gere l'absence de l'objet 'grist' hors contexte Grist. -->
+  <script src="{{ grist_plugin_api_url }}"></script>
 
   <!-- App JS -->
   <script defer src="{{ url_for('static', filename='js/widget.js') }}"></script>

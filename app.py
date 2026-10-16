@@ -397,8 +397,37 @@ def delete_account(account_id):
         return grist_error(e, f"Erreur suppression #{account_id}")
 
 
-# Origine autorisee pour grist-plugin-api.js (chaine vide = script servi par Magpie)
-GRIST_PLUGIN_API_ORIGIN = "https://docs.getgrist.com"
+# grist-plugin-api.js : charge depuis l'instance Grist elle-meme plutot que
+# depuis docs.getgrist.com (serveur de Grist Labs, hors perimetre). Ce script
+# s'execute dans la page qui detient la cle API : on ne fait confiance qu'a
+# l'instance qui heberge deja les documents. Pour une copie locale, deposer le
+# fichier dans static/js/vendor/ et definir
+# GRIST_PLUGIN_API_URL=/static/js/vendor/grist-plugin-api.js
+GRIST_PLUGIN_API_URL = os.environ.get(
+    "GRIST_PLUGIN_API_URL", f"{DEFAULT_GRIST_URL}/grist-plugin-api.js"
+).strip()
+if GRIST_PLUGIN_API_URL.startswith("/"):
+    GRIST_PLUGIN_API_ORIGIN = ""  # servi par Magpie : couvert par 'self'
+else:
+    _p = urlsplit(GRIST_PLUGIN_API_URL)
+    if _p.scheme != "https" or not _p.hostname:
+        raise RuntimeError("GRIST_PLUGIN_API_URL doit etre en https ou un chemin local")
+    GRIST_PLUGIN_API_ORIGIN = f"https://{_p.netloc}"
+
+# Niveau d'acces demande au document par le widget. 'full' est requis tant
+# qu'il n'est pas prouve que getDocName() fonctionne avec 'read table'.
+# 'read table' limiterait l'impact d'une compromission a la seule table liee.
+GRIST_WIDGET_ACCESS = os.environ.get("GRIST_WIDGET_ACCESS", "full").strip()
+if GRIST_WIDGET_ACCESS not in ("full", "read table"):
+    raise RuntimeError("GRIST_WIDGET_ACCESS doit valoir 'full' ou 'read table'")
+
+
+@app.context_processor
+def inject_widget_settings():
+    return {
+        "grist_plugin_api_url": GRIST_PLUGIN_API_URL,
+        "grist_widget_access": GRIST_WIDGET_ACCESS,
+    }
 
 # ─── Headers de securite ─────────────────────────────────────────────────────
 

@@ -30,7 +30,11 @@ window.MagpieWidget = {
     try {
       // 'full' est necessaire pour que getDocName() fonctionne. Grist
       // demandera confirmation a l'utilisateur avant d'accorder cet acces.
-      grist.ready({ requiredAccess: 'full' });
+      // Niveau d'acces fixe cote serveur (GRIST_WIDGET_ACCESS), jamais
+      // superieur a 'full'. Toute valeur inattendue retombe sur 'full'.
+      const requested = document.body.dataset.widgetAccess;
+      const access = requested === 'read table' ? 'read table' : 'full';
+      grist.ready({ requiredAccess: access });
 
       // Un timeout de securite : si Grist ne repond pas (page chargee
       // hors iframe malgre la presence du script, ou acces refuse par
