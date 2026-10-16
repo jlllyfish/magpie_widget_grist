@@ -2,8 +2,9 @@
 Modeles de base de donnees.
 
 Pas de table utilisateur : ce fork widget n'a pas d'authentification
-propre. La cle API Grist saisie par l'utilisateur (stockee uniquement en
-session serveur, jamais en base) fait office d'autorisation.
+propre. La cle API Grist saisie par l'utilisateur fait office
+d'autorisation ; elle n'est stockee nulle part cote serveur (ni base, ni
+session) et accompagne chaque requete dans l'en-tete X-Grist-Api-Key.
 """
 
 from datetime import datetime, timezone
