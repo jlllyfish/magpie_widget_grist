@@ -397,6 +397,9 @@ def delete_account(account_id):
         return grist_error(e, f"Erreur suppression #{account_id}")
 
 
+# Origine autorisee pour grist-plugin-api.js (chaine vide = script servi par Magpie)
+GRIST_PLUGIN_API_ORIGIN = "https://docs.getgrist.com"
+
 # ─── Headers de securite ─────────────────────────────────────────────────────
 
 @app.after_request
@@ -409,7 +412,26 @@ def set_security_headers(response):
         "ALLOWED_FRAME_ANCESTORS",
         "https://grist.numerique.gouv.fr"
     )
-    response.headers["Content-Security-Policy"] = f"frame-ancestors {allowed_frame_ancestors}"
+    # CSP stricte : aucun script inline ni externe hors liste, aucune requete
+    # sortante du navigateur hors de Magpie. Limite l'impact d'une injection
+    # (lecture de la cle API en memoire, exfiltration). 'unsafe-inline' n'est
+    # garde que pour les styles (attributs style="" des templates et du DSFR).
+    csp = "; ".join([
+        "default-src 'self'",
+        f"script-src 'self' {GRIST_PLUGIN_API_ORIGIN}".strip(),
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'self'",
+        f"frame-ancestors {allowed_frame_ancestors}",
+    ])
+    response.headers["Content-Security-Policy"] = csp
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     # Aucune reponse API (liste de comptes, cles generees) ne doit etre
