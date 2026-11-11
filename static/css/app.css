@@ -210,6 +210,35 @@
   max-width: 28rem;
 }
 
+.console-capture {
+  margin: 1.5rem 0 0;
+}
+
+.console-capture__link {
+  display: block;
+  background-image: none; /* pas de soulignement DSFR sous l'image */
+}
+
+/* Pas d'icône « lien externe » ajoutée par le DSFR sous la capture */
+.console-capture__link[target="_blank"]::after {
+  content: none;
+}
+
+.console-capture__caption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-mention-grey);
+}
+
+.console-capture img {
+  /* Pas de classe fr-responsive-img : le DSFR lui imposerait un ratio 16:9 */
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border-default-grey);
+  border-radius: 4px;
+}
+
 #btn-open-console[aria-disabled="true"] {
   pointer-events: none;
   opacity: 0.5;
