@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr" data-fr-theme>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Magpie · Guide des comptes de service Grist</title>
+  <link rel="icon" type="image/svg+xml" href="static/img/magpie.svg" />
+
+  <!-- DSFR (fichiers locaux) -->
+  <link rel="stylesheet" href="static/dsfr/dsfr.min.css" />
+  <link rel="stylesheet" href="static/dsfr/utility/utility.min.css" />
+
+  <!-- App -->
+  <link rel="stylesheet" href="static/css/app.css" />
+</head>
+<body>
+
+  <!-- ── En-tête ───────────────────────────────────────────────────────── -->
+  <header class="grist-header">
+    <div class="grist-header__inner">
+      <div class="grist-header__brand">
+        <img src="static/img/logo-ministere.png"
+             alt="Ministère de l'agriculture, de l'agro-alimentaire et de la souveraineté alimentaire"
+             class="grist-header__ministry-logo" />
+        <span class="grist-header__separator" aria-hidden="true"></span>
+        <img src="static/img/magpie.svg" alt="" aria-hidden="true" class="grist-header__logo" />
+        <div>
+          <p class="grist-header__title">Magpie</p>
+          <p class="grist-header__subtitle">Guide de création des comptes de service Grist</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="grist-main">
+
+    <!-- ── Principe ───────────────────────────────────────────────────── -->
+    <div class="fr-alert fr-alert--info">
+      <h2 class="fr-alert__title">Magpie ne manipule aucune clé API</h2>
+      <p>
+        Cette page prépare votre demande et vous guide pas à pas. La création se fait
+        dans la <strong>console API de Grist</strong>, qui utilise votre session Grist :
+        vous n'avez pas besoin de votre clé API personnelle, et rien ne transite par un
+        serveur tiers. Restez connecté à Grist dans ce navigateur.
+      </p>
+    </div>
+
+    <!-- ── Étape 1 : préparer ─────────────────────────────────────────── -->
+    <section class="grist-section" aria-labelledby="step1-title">
+      <h2 class="grist-section__title" id="step1-title">
+        <span class="step-number" aria-hidden="true">1</span>
+        Préparer le compte de service
+      </h2>
+
+      <div class="grist-grid-3">
+        <div class="fr-input-group" id="group-label">
+          <label class="fr-label" for="new-label">Nom *</label>
+          <input class="fr-input" type="text" id="new-label" maxlength="200"
+                 placeholder="n8n-automation" aria-describedby="new-label-messages" />
+          <div class="fr-messages-group" id="new-label-messages" aria-live="polite"></div>
+        </div>
+        <div class="fr-input-group">
+          <label class="fr-label" for="new-desc">Description</label>
+          <input class="fr-input" type="text" id="new-desc" maxlength="500"
+                 placeholder="Synchronisation hebdomadaire" />
+        </div>
+        <div class="fr-input-group" id="group-expires">
+          <label class="fr-label" for="new-expires">Date d'expiration *</label>
+          <input class="fr-input" type="date" id="new-expires"
+                 aria-describedby="new-expires-messages" />
+          <div class="fr-messages-group" id="new-expires-messages" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <p class="fr-text--sm fr-mt-2w fr-mb-1w">Requête à coller dans la console :</p>
+      <div class="code-block">
+        <pre><code id="create-json">Renseignez le nom et la date d'expiration.</code></pre>
+        <button id="btn-copy-create" type="button" disabled
+                class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line">
+          Copier
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Étape 2 : créer dans la console ────────────────────────────── -->
+    <section class="grist-section" aria-labelledby="step2-title">
+      <h2 class="grist-section__title" id="step2-title">
+        <span class="step-number" aria-hidden="true">2</span>
+        Créer le compte dans la console API
+      </h2>
+
+      <div class="fr-input-group instance-group" id="group-instance">
+        <label class="fr-label" for="instance-url">
+          Instance Grist
+          <span class="fr-hint-text">Détectée automatiquement quand Magpie est ouvert comme widget Grist.</span>
+        </label>
+        <input class="fr-input" type="url" id="instance-url" aria-describedby="instance-url-messages" />
+        <div class="fr-messages-group" id="instance-url-messages" aria-live="polite"></div>
+      </div>
+
+      <a id="btn-open-console" class="fr-btn fr-btn--icon-right fr-icon-external-link-line fr-mt-2w"
+         href="#" target="_blank" rel="noopener noreferrer">
+        Ouvrir la console API
+      </a>
+
+      <ol class="guide-steps fr-mt-3w">
+        <li>Dans le champ <strong>Filter by tag</strong> en haut de la console, tapez <code>service</code>.</li>
+        <li>Dépliez <strong>POST /service-accounts</strong> <em>(Create a service account)</em>.</li>
+        <li>Cliquez sur <strong>Try it out</strong>.</li>
+        <li>Remplacez le contenu de <strong>Request body</strong> par la requête copiée à l'étape 1.</li>
+        <li>Cliquez sur <strong>Execute</strong>.</li>
+      </ol>
+    </section>
+
+    <!-- ── Étape 3 : récupérer la clé ─────────────────────────────────── -->
+    <section class="grist-section" aria-labelledby="step3-title">
+      <h2 class="grist-section__title" id="step3-title">
+        <span class="step-number" aria-hidden="true">3</span>
+        Récupérer la clé et le login
+      </h2>
+
+      <div class="fr-alert fr-alert--warning fr-alert--sm fr-mb-2w">
+        <p>La clé n'est affichée <strong>qu'une seule fois</strong>. Copiez-la immédiatement.</p>
+      </div>
+
+      <p>Dans la console, sous <strong>Server response</strong>, le <strong>Response body</strong> contient :</p>
+      <ul>
+        <li><code>key</code> : la clé API du compte de service. Rangez-la directement là où elle sera utilisée
+          (identifiants n8n, gestionnaire de mots de passe…). Ne l'envoyez pas par mail ni par messagerie.</li>
+        <li><code>login</code> : une adresse en <code>…@serviceaccounts.invalid</code>, qui sert à partager
+          un document avec ce compte.</li>
+        <li><code>id</code> : le numéro du compte, utile pour le modifier ou le supprimer plus tard.</li>
+      </ul>
+    </section>
+
+    <!-- ── Étape 4 : partager le document ─────────────────────────────── -->
+    <section class="grist-section" aria-labelledby="step4-title">
+      <h2 class="grist-section__title" id="step4-title">
+        <span class="step-number" aria-hidden="true">4</span>
+        Donner accès à un document
+      </h2>
+
+      <p>Cette étape se fait dans Grist, sans la console :</p>
+      <ol class="guide-steps">
+        <li>Ouvrez le document concerné et cliquez sur <strong>Partager</strong>, puis <strong>Gérer les utilisateurs</strong>.</li>
+        <li>Collez le <code>login</code> du compte de service et ajoutez-le.</li>
+        <li>Choisissez le rôle <strong>le plus faible possible</strong> : <em>Lecteur</em> si le compte ne fait que lire,
+          <em>Éditeur</em> s'il écrit des données. <em>Propriétaire</em> uniquement si c'est indispensable.</li>
+        <li>Pour aller plus loin, des règles d'accès peuvent limiter le compte à certaines tables ou lignes.</li>
+      </ol>
+    </section>
+
+    <!-- ── Gérer les comptes existants ────────────────────────────────── -->
+    <section class="fr-accordions-group">
+      <section class="fr-accordion">
+        <h2 class="fr-accordion__title">
+          <button class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-manage">
+            Gérer mes comptes existants
+          </button>
+        </h2>
+        <div class="fr-collapse" id="acc-manage">
+          <p>Toutes ces opérations se trouvent dans la section <strong>service accounts</strong> de la console.
+            Le paramètre <code>saId</code> correspond à l'<code>id</code> du compte.</p>
+
+          <div class="fr-table fr-table--no-caption">
+            <div class="fr-table__wrapper">
+              <div class="fr-table__container">
+                <div class="fr-table__content">
+                  <table>
+                    <caption>Opérations de gestion des comptes de service</caption>
+                    <thead>
+                      <tr><th scope="col">Je veux…</th><th scope="col">Opération dans la console</th><th scope="col">À renseigner</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td>Lister mes comptes</td><td><code>GET /service-accounts</code></td><td>Rien</td></tr>
+                      <tr><td>Prolonger ou renommer un compte</td><td><code>PATCH /service-accounts/{saId}</code></td><td><code>saId</code> + requête ci-dessous</td></tr>
+                      <tr><td>Remplacer une clé (perdue ou exposée)</td><td><code>POST /service-accounts/{saId}/apikey</code></td><td><code>saId</code></td></tr>
+                      <tr><td>Révoquer la clé sans supprimer le compte</td><td><code>DELETE /service-accounts/{saId}/apikey</code></td><td><code>saId</code></td></tr>
+                      <tr><td>Supprimer le compte</td><td><code>DELETE /service-accounts/{saId}</code></td><td><code>saId</code></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="fr-h6 fr-mt-2w">Prolonger un compte</h3>
+          <div class="fr-input-group" id="group-extend">
+            <label class="fr-label" for="extend-expires">Nouvelle date d'expiration</label>
+            <input class="fr-input extend-input" type="date" id="extend-expires"
+                   aria-describedby="extend-expires-messages" />
+            <div class="fr-messages-group" id="extend-expires-messages" aria-live="polite"></div>
+          </div>
+          <div class="code-block">
+            <pre><code id="extend-json">Choisissez une date.</code></pre>
+            <button id="btn-copy-extend" type="button" disabled
+                    class="fr-btn fr-btn--secondary fr-btn--sm fr-btn--icon-left fr-icon-clipboard-line">
+              Copier
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="fr-accordion">
+        <h2 class="fr-accordion__title">
+          <button class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-help">
+            En cas de problème
+          </button>
+        </h2>
+        <div class="fr-collapse" id="acc-help">
+          <ul>
+            <li><strong>La section « service accounts » n'apparaît pas :</strong> l'instance n'a pas activé les
+              comptes de service (variable <code>GRIST_ENABLE_SERVICE_ACCOUNTS</code>). Contactez son administrateur.</li>
+            <li><strong>Réponse 401 ou 403 :</strong> vous n'êtes pas connecté à Grist dans ce navigateur.
+              Connectez-vous, puis rechargez la console.</li>
+            <li><strong>Réponse 400 :</strong> la requête collée est incomplète ou mal formée. Recopiez-la depuis l'étape 1
+              en remplaçant tout le contenu de <em>Request body</em>.</li>
+            <li><strong>Clé perdue :</strong> elle ne peut pas être réaffichée. Générez-en une nouvelle
+              (<code>POST /service-accounts/{saId}/apikey</code>) et mettez à jour les outils qui l'utilisent.</li>
+          </ul>
+        </div>
+      </section>
+    </section>
+
+  </main>
+
+  <div id="toast-container" class="fr-toast-container" aria-live="polite"></div>
+
+  <!-- DSFR JS -->
+  <script type="module" src="static/dsfr/dsfr.module.min.js"></script>
+  <script type="text/javascript" nomodule src="static/dsfr/dsfr.nomodule.min.js"></script>
+
+  <!-- App JS : aucun appel réseau, aucun stockage -->
+  <script defer src="static/js/guide.js"></script>
+</body>
+</html>
