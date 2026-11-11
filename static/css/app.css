@@ -214,6 +214,10 @@
   margin: 1.5rem 0 0;
 }
 
+.console-capture--compact {
+  max-width: 640px;
+}
+
 .console-capture__link {
   display: block;
   background-image: none; /* pas de soulignement DSFR sous l'image */
